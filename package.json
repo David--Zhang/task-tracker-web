@@ -1,0 +1,9 @@
+{
+  "name": "task-tracker-web",
+  "version": "1.0.0",
+  "description": "一个简洁的任务追踪器 Web 应用",
+  "scripts": {
+    "test": "node --test test.js"
+  },
+  "private": true
+}
