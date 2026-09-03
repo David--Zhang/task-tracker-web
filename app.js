@@ -1,44 +1,123 @@
+// ========== 数据模型 ==========
+const STORAGE_KEY = 'task-tracker-tasks';
+
+let tasks = loadTasks();
+
+function loadTasks() {
+    try {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// ========== DOM 引用 ==========
 const taskInput = document.getElementById('task-input');
 const addTaskBtn = document.getElementById('add-task-btn');
 const taskList = document.getElementById('task-list');
+const statsText = document.getElementById('stats-text');
 
-// 1. Load tasks from Local Storage when the webpage opens
-let savedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-
-// 2. Define a function to render the task array onto the screen UI
-function renderTasks() {
-    // Clear out current list items to avoid duplicate visual entries
-    taskList.innerHTML = '';
-    
-    // Loop through the stored array and build the HTML items
-    savedTasks.forEach((taskText) => {
-        const li = document.createElement('li');
-        li.textContent = taskText;
-        taskList.appendChild(li);
-    });
+// ========== 核心操作 ==========
+function addTask(text) {
+    const task = {
+        id: generateId(),
+        text: text,
+        completed: false
+    };
+    tasks.push(task);
+    saveTasks();
+    render();
 }
 
-// 3. Trigger the initial render when the application loads
-renderTasks();
+function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+}
 
-// 4. Handle adding a new item to the task pool
-addTaskBtn.addEventListener('click', () => {
-    const taskText = taskInput.value.trim();
-    
-    if (taskText === '') {
-        alert('Please enter a task!');
-        return;
+function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+        task.completed = !task.completed;
+        saveTasks();
+        render();
+    }
+}
+
+// ========== 渲染 ==========
+function render() {
+    taskList.innerHTML = '';
+
+    if (tasks.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        emptyDiv.textContent = '🎉 暂无任务，添加一个开始吧！';
+        taskList.appendChild(emptyDiv);
+    } else {
+        tasks.forEach(task => {
+            const li = document.createElement('li');
+
+            // 圆形复选框
+            const checkbox = document.createElement('div');
+            checkbox.className = 'task-checkbox' + (task.completed ? ' checked' : '');
+            checkbox.addEventListener('click', () => toggleTask(task.id));
+
+            // 任务文本
+            const span = document.createElement('span');
+            span.className = 'task-text' + (task.completed ? ' completed' : '');
+            span.textContent = task.text;
+            span.addEventListener('click', () => toggleTask(task.id));
+
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '✕';
+            deleteBtn.title = '删除任务';
+            deleteBtn.addEventListener('click', () => deleteTask(task.id));
+
+            li.appendChild(checkbox);
+            li.appendChild(span);
+            li.appendChild(deleteBtn);
+            taskList.appendChild(li);
+        });
     }
 
-    // Add the new task string to our array state
-    savedTasks.push(taskText);
+    updateStats();
+}
 
-    // Save the updated array back into browser memory
-    localStorage.setItem('tasks', JSON.stringify(savedTasks));
+function updateStats() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    statsText.textContent = `已完成 ${completed} / 共 ${total} 个任务`;
+}
 
-    // Refresh the visible list elements
-    renderTasks();
-
-    // Clear out input field for next entry
+// ========== 事件绑定 ==========
+addTaskBtn.addEventListener('click', () => {
+    const taskText = taskInput.value.trim();
+    if (taskText === '') {
+        taskInput.focus();
+        return;
+    }
+    addTask(taskText);
     taskInput.value = '';
+    taskInput.focus();
 });
+
+// 按回车键添加任务
+taskInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        addTaskBtn.click();
+    }
+});
+
+// ========== 初始化 ==========
+render();
