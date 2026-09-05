@@ -1,27 +1,42 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>任务追踪器</title>
+    <title>Task Tracker</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <h1>📋 任务追踪器</h1>
-
-        <div class="input-section">
-            <input type="text" id="task-input" placeholder="输入新任务..." autofocus>
-            <button id="add-task-btn">添加</button>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>📋 Task Tracker</h2>
+            <p>Track tasks by category</p>
         </div>
-
-        <ul id="task-list">
+        <ul class="category-list" id="category-list">
+            <!-- Rendered by JS -->
         </ul>
+    </aside>
 
-        <div class="task-stats">
-            <span id="stats-text">已完成 0 / 共 0 个任务</span>
+    <main class="main-content">
+        <div class="category-header">
+            <h1 id="category-title"></h1>
+            <p id="category-desc"></p>
         </div>
-    </div>
+
+        <div class="app-container">
+            <div class="input-section">
+                <input type="text" id="task-input" placeholder="Enter a new task..." autofocus>
+                <button id="add-task-btn">Add</button>
+            </div>
+
+            <ul id="task-list">
+            </ul>
+
+            <div class="task-stats">
+                <span id="stats-text">0 / 0 tasks completed</span>
+            </div>
+        </div>
+    </main>
 
     <script src="app.js"></script>
 </body>
