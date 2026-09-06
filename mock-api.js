@@ -194,3 +194,8 @@ const MockAPI = {
         return { data: removed };
     }
 };
+
+// Allow require() in Node.js for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = MockAPI;
+}
