@@ -1,4 +1,4 @@
-// MockAPI 测试 - 验证分类差异化字段和项目管理逻辑
+// MockAPI 测试 - 验证分类差异化字段和任务管理逻辑
 // 用法: node test-mock-api.js
 
 const assert = require('node:assert/strict');
@@ -96,25 +96,25 @@ await describe('Construction 任务字段', async () => {
 });
 
 await describe('Custom Clearance 任务字段', async () => {
-    await test('Clearance 任务应包含 arrivalDate, billOfLading, shippingCompany, cargoDescription, projectId', async () => {
+    await test('Clearance 任务应包含 projectName, arrivalDate, billOfLading, shippingCompany, cargoDescription', async () => {
         resetDb();
         const response = await MockAPI.createTask('custom-clearance', {
             arrivalDate: '2026-03-20',
             billOfLading: 'BOL-2026-999',
             shippingCompany: 'Evergreen',
             cargoDescription: 'Industrial machinery',
-            projectId: 'proj-1'
+            projectName: 'Project Gamma'
         });
         const task = response.data;
+        assert.equal(task.projectName, 'Project Gamma');
         assert.equal(task.arrivalDate, '2026-03-20');
         assert.equal(task.billOfLading, 'BOL-2026-999');
         assert.equal(task.shippingCompany, 'Evergreen');
         assert.equal(task.cargoDescription, 'Industrial machinery');
-        assert.equal(task.projectId, 'proj-1');
         assert.equal(task.completed, false);
     });
 
-    await test('Clearance 示例数据应包含差异化字段', async () => {
+    await test('Clearance 示例数据应包含 projectName 字段', async () => {
         resetDb();
         const response = await MockAPI.getTasks('custom-clearance');
         const task = response.data[0];
@@ -122,7 +122,9 @@ await describe('Custom Clearance 任务字段', async () => {
         assert.ok(task.billOfLading, 'should have billOfLading');
         assert.ok(task.shippingCompany, 'should have shippingCompany');
         assert.ok(task.cargoDescription, 'should have cargoDescription');
-        assert.ok(task.projectId, 'should have projectId');
+        assert.ok(task.projectName, 'should have projectName');
+        // Verify projectId no longer exists
+        assert.equal(task.projectId, undefined, 'should NOT have projectId anymore');
     });
 
     await test('Clearance 任务应不包含 Construction 字段', async () => {
@@ -158,7 +160,7 @@ await describe('分类隔离', async () => {
             billOfLading: 'BOL-NEW',
             shippingCompany: 'Test',
             cargoDescription: 'Test cargo',
-            projectId: 'proj-1'
+            projectName: 'My Project'
         });
 
         const constructionTasks = (await MockAPI.getTasks('construction')).data;
@@ -188,58 +190,31 @@ await describe('分类隔离', async () => {
     });
 });
 
-await describe('项目管理', async () => {
-    await test('应能获取项目列表', async () => {
+await describe('项目名作为纯文本', async () => {
+    await test('Clearance 任务中的 projectName 应为字符串文本', async () => {
         resetDb();
-        const response = await MockAPI.getProjects();
-        assert.ok(response.data.length >= 2);
-        assert.ok(response.data[0].id);
-        assert.ok(response.data[0].name);
-    });
-
-    await test('应能创建新项目', async () => {
-        resetDb();
-        const before = (await MockAPI.getProjects()).data;
-        const beforeCount = before.length;
-        const response = await MockAPI.createProject('Project Gamma');
-        assert.equal(response.data.name, 'Project Gamma');
-        assert.ok(response.data.id);
-        const after = (await MockAPI.getProjects()).data;
-        assert.equal(after.length, beforeCount + 1);
-    });
-
-    await test('应能删除项目', async () => {
-        resetDb();
-        const before = (await MockAPI.getProjects()).data;
-        const beforeCount = before.length;
-        await MockAPI.deleteProject(before[0].id);
-        const after = (await MockAPI.getProjects()).data;
-        assert.equal(after.length, beforeCount - 1);
-    });
-
-    await test('删除不存在的项目应抛出错误', async () => {
-        resetDb();
-        let threw = false;
-        try {
-            await MockAPI.deleteProject('non-existent');
-        } catch (err) {
-            threw = true;
-            assert.equal(err.message, 'Project not found');
-        }
-        assert.ok(threw, 'should throw error for non-existent project');
-    });
-
-    await test('新任务应能关联到新建的项目', async () => {
-        resetDb();
-        const project = await MockAPI.createProject('Project Delta');
-        const task = await MockAPI.createTask('custom-clearance', {
+        const response = await MockAPI.createTask('custom-clearance', {
             arrivalDate: '2026-04-01',
-            billOfLading: 'BOL-DELTA',
-            shippingCompany: 'Hapag-Lloyd',
-            cargoDescription: 'Electronics',
-            projectId: project.data.id
+            billOfLading: 'BOL-TEXT',
+            shippingCompany: 'TestCo',
+            cargoDescription: 'Test items',
+            projectName: 'Alpha Project Name'
         });
-        assert.equal(task.data.projectId, project.data.id);
+        const task = response.data;
+        assert.equal(typeof task.projectName, 'string', 'projectName should be a string');
+        assert.equal(task.projectName, 'Alpha Project Name');
+    });
+
+    await test('创建任务时可自由输入任意项目名', async () => {
+        resetDb();
+        const response = await MockAPI.createTask('custom-clearance', {
+            arrivalDate: '2026-05-01',
+            billOfLading: 'BOL-FREE',
+            shippingCompany: 'AnyLine',
+            cargoDescription: 'Various goods',
+            projectName: 'Completely Different Project XYZ'
+        });
+        assert.equal(response.data.projectName, 'Completely Different Project XYZ');
     });
 });
 
@@ -256,6 +231,48 @@ await describe('分类统计', async () => {
         assert.ok(construction.completed >= 2, 'construction should have completed tasks');
         assert.ok(clearance.total >= 3, 'clearance should have tasks');
         assert.ok(clearance.completed >= 1, 'clearance should have completed tasks');
+    });
+});
+
+await describe('CRUD 操作完整性', async () => {
+    await test('Create - 创建 Construction 任务', async () => {
+        resetDb();
+        const response = await MockAPI.createTask('construction', {
+            name: 'Full CRUD Test Task',
+            startDate: '2026-06-01',
+            completionDate: '2026-06-30',
+            completionPercentage: 0
+        });
+        assert.equal(response.data.name, 'Full CRUD Test Task');
+        assert.ok(response.data.id);
+    });
+
+    await test('Update - 更新 Clearance 任务的 projectName', async () => {
+        resetDb();
+        const created = await MockAPI.createTask('custom-clearance', {
+            arrivalDate: '2026-07-01',
+            billOfLading: 'BOL-CRUD',
+            shippingCompany: 'TestShip',
+            cargoDescription: 'Test cargo',
+            projectName: 'Original Name'
+        });
+        const updated = await MockAPI.updateTask(created.data.id, { projectName: 'Updated Project Name' });
+        assert.equal(updated.data.projectName, 'Updated Project Name');
+    });
+
+    await test('Delete - 删除 Construction 任务后该 ID 不再存在', async () => {
+        resetDb();
+        const created = await MockAPI.createTask('construction', {
+            name: 'Task To Delete',
+            startDate: '2026-08-01',
+            completionDate: '2026-08-31',
+            completionPercentage: 0
+        });
+        await MockAPI.deleteTask(created.data.id);
+        
+        const remaining = (await MockAPI.getTasks('construction')).data;
+        const found = remaining.find(t => t.id === created.data.id);
+        assert.equal(found, undefined, 'deleted task should no longer exist');
     });
 });
 

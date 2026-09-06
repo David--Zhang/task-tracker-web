@@ -4,10 +4,6 @@
 const MockAPI = {
     // 模拟数据库
     db: {
-        projects: [
-            { id: 'proj-1', name: 'Project Alpha' },
-            { id: 'proj-2', name: 'Project Beta' }
-        ],
         categories: [
             { id: 'construction', name: 'Construction', icon: '🏗️', description: 'Construction project tasks' },
             { id: 'custom-clearance', name: 'Custom Clearance', icon: '📦', description: 'Custom clearance process tasks' }
@@ -66,7 +62,7 @@ const MockAPI = {
                 billOfLading: 'BOL-2026-001',
                 shippingCompany: 'Maersk',
                 cargoDescription: 'Steel beams and construction frames',
-                projectId: 'proj-1',
+                projectName: 'Project Alpha',
                 completed: true,
                 created_at: new Date(Date.now() - 86400000).toISOString(),
                 updated_at: new Date(Date.now() - 86400000).toISOString()
@@ -78,7 +74,7 @@ const MockAPI = {
                 billOfLading: 'BOL-2026-002',
                 shippingCompany: 'COSCO',
                 cargoDescription: 'Electrical cables and switchboards',
-                projectId: 'proj-2',
+                projectName: 'Project Beta',
                 completed: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -90,7 +86,7 @@ const MockAPI = {
                 billOfLading: 'BOL-2026-003',
                 shippingCompany: 'MSC',
                 cargoDescription: 'HVAC equipment',
-                projectId: 'proj-1',
+                projectName: 'Project Gamma',
                 completed: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -132,7 +128,7 @@ const MockAPI = {
         return { data: tasks };
     },
 
-    // POST /api/tasks
+    // POST /api/tasks - creates task with category-specific fields
     async createTask(categoryId, taskData) {
         await this.delay();
         const now = new Date().toISOString();
@@ -168,30 +164,6 @@ const MockAPI = {
         }
         this.db.tasks.splice(index, 1);
         return { data: { success: true } };
-    },
-
-    // Project management for Custom Clearance
-    async getProjects() {
-        await this.delay();
-        return { data: this.db.projects };
-    },
-
-    async createProject(name) {
-        await this.delay();
-        const project = { id: this.generateId(), name };
-        this.db.projects.push(project);
-        return { data: project };
-    },
-
-    async deleteProject(id) {
-        await this.delay();
-        const index = this.db.projects.findIndex(p => p.id === id);
-        if (index === -1) {
-            throw new Error('Project not found');
-        }
-        const removed = this.db.projects.splice(index, 1)[0];
-        // Optionally remove references from tasks or leave them
-        return { data: removed };
     }
 };
 

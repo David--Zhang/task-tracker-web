@@ -6,7 +6,6 @@ const CATEGORIES = [
 
 let activeCategoryId = CATEGORIES[0].id;
 let tasks = [];
-let projects = [];
 let isLoading = false;
 
 // ========== DOM 引用 ==========
@@ -24,11 +23,6 @@ function formatDate(dateString) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function getProjectName(projectId) {
-    const p = projects.find(proj => proj.id === projectId);
-    return p ? p.name : 'Unknown Project';
-}
-
 // ========== 核心操作 (调用 Mock API) ==========
 async function fetchTasks() {
     isLoading = true;
@@ -43,17 +37,6 @@ async function fetchTasks() {
     } finally {
         isLoading = false;
         renderTasks();
-    }
-}
-
-async function fetchProjects() {
-    if (activeCategoryId !== 'custom-clearance') return;
-    try {
-        const response = await MockAPI.getProjects();
-        projects = response.data;
-    } catch (err) {
-        console.error('Failed to load projects:', err);
-        showError('Failed to load projects');
     }
 }
 
@@ -104,36 +87,9 @@ async function switchCategory(categoryId) {
     if (categoryId === activeCategoryId) return;
     activeCategoryId = categoryId;
     renderCategoryHeader();
-    await fetchProjects();
     renderForm();
-    renderProjectManagement();
     await fetchTasks();
     await renderSidebar();
-}
-
-// ========== 项目操作 ==========
-async function addProject(name) {
-    try {
-        const response = await MockAPI.createProject(name);
-        projects.push(response.data);
-        renderForm();
-        renderProjectManagement();
-    } catch (err) {
-        console.error('Failed to add project:', err);
-        showError('Failed to add project');
-    }
-}
-
-async function removeProject(id) {
-    try {
-        await MockAPI.deleteProject(id);
-        projects = projects.filter(p => p.id !== id);
-        renderForm();
-        renderProjectManagement();
-    } catch (err) {
-        console.error('Failed to delete project:', err);
-        showError('Failed to delete project');
-    }
 }
 
 // ========== 渲染 ==========
@@ -256,8 +212,6 @@ function createClearanceForm() {
     const form = document.createElement('form');
     form.className = 'task-form';
 
-    const projectOptions = projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
-
     form.innerHTML = `
         <div class="form-row two-col">
             <div class="form-group">
@@ -275,11 +229,8 @@ function createClearanceForm() {
                 <input type="text" id="shippingCompany" placeholder="e.g. Maersk" required>
             </div>
             <div class="form-group">
-                <label for="projectId">Project</label>
-                <select id="projectId" required>
-                    <option value="" disabled selected>Select a project</option>
-                    ${projectOptions}
-                </select>
+                <label for="projectName">Project Name</label>
+                <input type="text" id="projectName" placeholder="e.g. Project Alpha" required>
             </div>
         </div>
         <div class="form-row">
@@ -299,51 +250,15 @@ function createClearanceForm() {
         const arrivalDate = form.querySelector('#arrivalDate').value;
         const billOfLading = form.querySelector('#billOfLading').value.trim();
         const shippingCompany = form.querySelector('#shippingCompany').value.trim();
+        const projectName = form.querySelector('#projectName').value.trim();
         const cargoDescription = form.querySelector('#cargoDescription').value.trim();
-        const projectId = form.querySelector('#projectId').value;
 
-        await addTask({ arrivalDate, billOfLading, shippingCompany, cargoDescription, projectId });
+        await addTask({ arrivalDate, billOfLading, shippingCompany, projectName, cargoDescription });
         form.reset();
         submitBtn.disabled = false;
     });
 
     return form;
-}
-
-function renderProjectManagement() {
-    const panel = document.getElementById('project-management');
-    if (!panel) return;
-
-    if (activeCategoryId !== 'custom-clearance') {
-        panel.style.display = 'none';
-        return;
-    }
-    panel.style.display = 'block';
-
-    const listEl = panel.querySelector('#project-list');
-    listEl.innerHTML = '';
-
-    projects.forEach(project => {
-        const tag = document.createElement('span');
-        tag.className = 'project-tag';
-        tag.innerHTML = `${project.name} <button type="button" data-id="${project.id}">×</button>`;
-        tag.querySelector('button').addEventListener('click', () => removeProject(project.id));
-        listEl.appendChild(tag);
-    });
-
-    const input = panel.querySelector('#new-project-name');
-    const addBtn = panel.querySelector('#add-project-btn');
-
-    // 防止重复绑定
-    const newAddBtn = addBtn.cloneNode(true);
-    addBtn.parentNode.replaceChild(newAddBtn, addBtn);
-
-    newAddBtn.addEventListener('click', () => {
-        const name = input.value.trim();
-        if (!name) return;
-        addProject(name);
-        input.value = '';
-    });
 }
 
 function renderTasks() {
@@ -449,7 +364,7 @@ function renderClearanceCard(task) {
     meta.innerHTML = `
         <span><strong>Arrival:</strong> ${formatDate(task.arrivalDate)}</span>
         <span><strong>Shipping:</strong> ${task.shippingCompany}</span>
-        <span><strong>Project:</strong> ${getProjectName(task.projectId)}</span>
+        <span><strong>Project:</strong> ${task.projectName || '-'}</span>
     `;
 
     const desc = document.createElement('div');
@@ -479,9 +394,7 @@ function showError(message) {
 // ========== 初始化 ==========
 async function init() {
     renderCategoryHeader();
-    await fetchProjects();
     renderForm();
-    renderProjectManagement();
     await fetchTasks();
     await renderSidebar();
 }
