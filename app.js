@@ -40,7 +40,6 @@ const toolBar = document.getElementById('toolbar');
 const searchInput = document.getElementById('search-input');
 const exportCsvBtn = document.getElementById('export-csv-btn');
 const selectAllCheckbox = document.getElementById('select-all-checkbox');
-const batchActionbar = document.getElementById('batch-actionbar');
 
 // ========== 工具函数 ==========
 function formatDate(dateString) {
@@ -260,38 +259,64 @@ async function archiveTask(id) {
 // ========== 批量归档 ==========
 async function batchArchive(ids) {
     let success = 0;
+    let skipped = 0;
+    const archivedIds = [];
+
     for (const id of ids) {
         const task = tasks.find(t => t.id === id);
         if (task && task.completed) {
             try {
                 await MockAPI.archiveTask(id);
+                archivedTasks.push({ ...task, archived_at: new Date().toISOString() });
+                archivedIds.push(id);
                 success++;
-            } catch {}
+            } catch {
+                skipped++;
+            }
+        } else {
+            skipped++;
         }
     }
+
     if (success > 0) {
-        tasks = tasks.filter(t => !ids.includes(t.id) || !t.completed);
-        renderedSelectedIds.clear();
-        showToast(`${success} task(s) archived`);
-        renderAll();
-        await renderSidebar();
+        tasks = tasks.filter(t => !archivedIds.includes(t.id));
+        selectedTaskIds.clear();
+        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+        showToast(success === 1 ? '1 task archived' : `${success} tasks archived`);
+    } else {
+        showToast('Only completed tasks can be archived');
     }
+
+    renderAll();
+    await renderSidebar();
 }
 
 // ========== 批量删除 ==========
 async function batchDelete(ids) {
+    let success = 0;
+    const deletedIds = [];
+
     for (const id of ids) {
         const task = tasks.find(t => t.id === id);
         if (task) {
             try {
                 await MockAPI.deleteTask(id);
                 deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
+                deletedIds.push(id);
+                success++;
             } catch {}
         }
     }
-    tasks = tasks.filter(t => !ids.includes(t.id));
-    renderedSelectedIds.clear();
-    showToast(`${ids.length} task(s) moved to Deleted`);
+
+    if (success > 0) {
+        tasks = tasks.filter(t => !deletedIds.includes(t.id));
+        selectedTaskIds.clear();
+        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+        showToast(success === 1 ? '1 task moved to Deleted' : `${success} tasks moved to Deleted`);
+    } else {
+        showToast('Failed to delete tasks');
+    }
+
     renderAll();
     await renderSidebar();
 }
@@ -458,6 +483,7 @@ function closeModal(modal) {
 
 window.toggleSection = toggleSection;
 window.closeEditModal = () => closeModal(editModal);
+window.closeConfirmModal = () => closeModal(confirmModal);
 
 function showConfirmDelete(type, sourceLabel) {
     confirmSource.textContent = sourceLabel;
@@ -694,7 +720,7 @@ function renderActiveList() {
 
 function renderConstructionCard(task) {
     const li = document.createElement('li');
-    li.className = 'task-card';
+    li.className = 'task-card' + (selectedTaskIds.has(task.id) ? ' selected' : '');
 
     const top = document.createElement('div');
     top.className = 'task-card-top';
@@ -773,7 +799,7 @@ function renderConstructionCard(task) {
 
 function renderClearanceCard(task) {
     const li = document.createElement('li');
-    li.className = 'task-card';
+    li.className = 'task-card' + (selectedTaskIds.has(task.id) ? ' selected' : '');
 
     const top = document.createElement('div');
     top.className = 'task-card-top';
@@ -1035,19 +1061,25 @@ function toggleTaskSelection(id) {
 }
 
 function updateBatchActionBar() {
+    // 清理已不存在于当前列表中的过期选择（例如已删除/已归档的任务）
+    const visibleIds = new Set(tasks.map(t => t.id));
+    [...selectedTaskIds].forEach(id => {
+        if (!visibleIds.has(id)) selectedTaskIds.delete(id);
+    });
+
     const clearBtn = document.getElementById('clear-selection-btn');
-    const selectionCount = toolBar.querySelector('.selection-count');
+    const selectionCount = toolBar ? toolBar.querySelector('.selection-count') : null;
     const deleteBtn = document.getElementById('batch-delete-btn');
     const archiveBtn = document.getElementById('batch-archive-btn');
-    
+
     const count = selectedTaskIds.size;
-    
+
     if (count > 0) {
         // 显示批量操作相关元素
         if (clearBtn) clearBtn.style.display = 'inline-block';
         if (selectionCount) {
             selectionCount.style.display = 'inline';
-            selectionCount.textContent = `${count} selected`;
+            selectionCount.textContent = count === 1 ? '1 selected' : `${count} selected`;
         }
         if (deleteBtn) {
             deleteBtn.style.display = 'inline-block';
@@ -1069,6 +1101,12 @@ function updateBatchActionBar() {
             archiveBtn.style.display = 'none';
             archiveBtn.disabled = true;
         }
+    }
+
+    // 同步"全选"复选框状态（当前过滤结果全部被选中时打勾）
+    if (selectAllCheckbox) {
+        const filteredCount = filteredTasks(getSortedTasks(tasks)).length;
+        selectAllCheckbox.checked = filteredCount > 0 && count === filteredCount;
     }
 }
 
@@ -1131,30 +1169,30 @@ async function init() {
         exportCsvBtn.addEventListener('click', exportToCSV);
     }
 
-    if (batchActionbar) {
-        const deleteBtn = document.getElementById('batch-delete-btn');
-        const archiveBtn = document.getElementById('batch-archive-btn');
-        const clearBtn = document.getElementById('clear-selection-btn');
+    // 批量操作按钮（位于 #toolbar 内，逐个绑定）
+    const batchDeleteBtn = document.getElementById('batch-delete-btn');
+    const batchArchiveBtn = document.getElementById('batch-archive-btn');
+    const clearSelectionBtn = document.getElementById('clear-selection-btn');
 
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', async () => {
-                if (selectedTaskIds.size === 0) return;
-                await batchDelete([...selectedTaskIds]);
-            });
-        }
-        if (archiveBtn) {
-            archiveBtn.addEventListener('click', async () => {
-                if (selectedTaskIds.size === 0) return;
-                await batchArchive([...selectedTaskIds]);
-            });
-        }
-        if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
-                selectedTaskIds.clear();
-                renderActiveList();
-                updateBatchActionBar();
-            });
-        }
+    if (batchDeleteBtn) {
+        batchDeleteBtn.addEventListener('click', async () => {
+            if (selectedTaskIds.size === 0) return;
+            await batchDelete([...selectedTaskIds]);
+        });
+    }
+    if (batchArchiveBtn) {
+        batchArchiveBtn.addEventListener('click', async () => {
+            if (selectedTaskIds.size === 0) return;
+            await batchArchive([...selectedTaskIds]);
+        });
+    }
+    if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', () => {
+            selectedTaskIds.clear();
+            selectAllCheckbox.checked = false;
+            renderActiveList();
+            updateBatchActionBar();
+        });
     }
 
     await fetchData();
