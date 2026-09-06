@@ -1035,17 +1035,39 @@ function toggleTaskSelection(id) {
 }
 
 function updateBatchActionBar() {
-    if (toolBar) {
-        const count = selectedTaskIds.size;
-        if (count > 0) {
-            toolBar.style.display = 'flex';
-            toolBar.querySelector('.selection-count').textContent = `${count} selected`;
-            const deleteBtn = toolBar.querySelector('#batch-delete-btn');
-            const archiveBtn = toolBar.querySelector('#batch-archive-btn');
-            if (deleteBtn) deleteBtn.disabled = false;
-            if (archiveBtn) archiveBtn.disabled = false;
-        } else {
-            toolBar.style.display = 'none';
+    const clearBtn = document.getElementById('clear-selection-btn');
+    const selectionCount = toolBar.querySelector('.selection-count');
+    const deleteBtn = document.getElementById('batch-delete-btn');
+    const archiveBtn = document.getElementById('batch-archive-btn');
+    
+    const count = selectedTaskIds.size;
+    
+    if (count > 0) {
+        // 显示批量操作相关元素
+        if (clearBtn) clearBtn.style.display = 'inline-block';
+        if (selectionCount) {
+            selectionCount.style.display = 'inline';
+            selectionCount.textContent = `${count} selected`;
+        }
+        if (deleteBtn) {
+            deleteBtn.style.display = 'inline-block';
+            deleteBtn.disabled = false;
+        }
+        if (archiveBtn) {
+            archiveBtn.style.display = 'inline-block';
+            archiveBtn.disabled = false;
+        }
+    } else {
+        // 隐藏批量操作相关元素
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (selectionCount) selectionCount.style.display = 'none';
+        if (deleteBtn) {
+            deleteBtn.style.display = 'none';
+            deleteBtn.disabled = true;
+        }
+        if (archiveBtn) {
+            archiveBtn.style.display = 'none';
+            archiveBtn.disabled = true;
         }
     }
 }
