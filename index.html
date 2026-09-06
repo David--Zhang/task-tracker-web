@@ -28,6 +28,24 @@
                 <!-- Rendered by JS -->
             </div>
 
+            <!-- ========== 工具栏：搜索 + 导出 + 批量操作 ========== -->
+            <div id="toolbar" class="toolbar" style="display:none;">
+                <div class="toolbar-left">
+                    <input type="checkbox" id="select-all-checkbox" title="Select all">
+                    <button type="button" id="clear-selection-btn" class="btn-sm">Clear</button>
+                    <span class="selection-count"></span>
+                </div>
+                <div class="toolbar-center">
+                    <input type="text" id="search-input" placeholder="🔍 Search tasks..." class="search-input">
+                </div>
+                <div class="toolbar-right">
+                    <button type="button" id="export-csv-btn" class="btn-export">📥 Export CSV</button>
+                    <button type="button" id="batch-delete-btn" class="btn-danger-sm" disabled>🗑️ Delete Selected</button>
+                    <button type="button" id="batch-archive-btn" class="btn-archive-sm" disabled>📦 Archive Selected</button>
+                </div>
+            </div>
+
+            <!-- ========== 活跃任务列表 ========== -->
             <ul id="task-list">
             </ul>
 

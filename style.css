@@ -124,6 +124,126 @@ body {
     max-width: 720px;
 }
 
+/* ========== 工具栏 ========== */
+.toolbar {
+    display: none;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.toolbar-center {
+    flex: 1 1 100%;
+    order: 3;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.selection-count {
+    font-size: 13px;
+    color: #555;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #28a745;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    transition: all 0.2s;
+}
+
+.btn-sm:hover {
+    background: #e0e0e0;
+}
+
+.btn-export {
+    padding: 6px 14px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-export:hover {
+    background: #5a6268;
+}
+
+.btn-danger-sm {
+    padding: 6px 14px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-danger-sm:hover:not(:disabled) {
+    background: #c82333;
+}
+
+.btn-archive-sm {
+    padding: 6px 14px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-archive-sm:hover:not(:disabled) {
+    background: #218838;
+}
+
 /* ========== 表单 ========== */
 .form-section {
     margin-bottom: 20px;
@@ -302,6 +422,11 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+#task-list li.task-card.selected {
+    border-left-color: #28a745;
+    background: #f0faf0;
+}
+
 /* 已归档任务卡片 */
 #archived-list li.archived-card {
     background: #f0f4f8;
@@ -362,7 +487,7 @@ body {
 .task-meta {
     display: flex;
     gap: 16px;
-    padding: 0 16px 14px 48px;
+    padding: 0 16px 14px 60px;
     font-size: 13px;
     color: #666;
     flex-wrap: wrap;
@@ -373,7 +498,7 @@ body {
 }
 
 .task-description {
-    padding: 0 16px 14px 48px;
+    padding: 0 16px 14px 60px;
     font-size: 13px;
     color: #555;
     line-height: 1.5;
@@ -385,7 +510,7 @@ body {
     height: 20px;
     background: #e0e0e0;
     border-radius: 10px;
-    margin: 0 16px 16px 48px;
+    margin: 0 16px 16px 60px;
     overflow: hidden;
 }
 
@@ -433,6 +558,36 @@ body {
     content: '✓';
     color: white;
     font-size: 12px;
+    font-weight: bold;
+}
+
+/* 批量选择复选框 */
+.select-checkbox {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #aaa;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.select-checkbox:hover {
+    border-color: #28a745;
+}
+
+.select-checkbox.checked {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.select-checkbox.checked::after {
+    content: '✓';
+    color: white;
+    font-size: 11px;
     font-weight: bold;
 }
 
@@ -728,6 +883,10 @@ button:disabled {
     z-index: 1000;
 }
 
+.toast-success {
+    background: #28a745;
+}
+
 @keyframes slideIn {
     from {
         transform: translateX(100%);
@@ -778,6 +937,12 @@ button:disabled {
     }
     .app-container {
         padding: 16px;
+    }
+    .toolbar {
+        gap: 6px;
+    }
+    .toolbar-right {
+        flex-wrap: wrap;
     }
     .form-row.two-col {
         flex-direction: column;

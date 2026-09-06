@@ -11,6 +11,10 @@ let deletedTasks = [];
 let isLoading = false;
 let openSections = new Set();
 
+// 搜索与批量操作状态
+let searchTerm = '';
+let selectedTaskIds = new Set();
+
 // ========== DOM 引用 ==========
 const categoryListEl = document.getElementById('category-list');
 const categoryTitleEl = document.getElementById('category-title');
@@ -32,12 +36,59 @@ const editModalTitle = document.getElementById('edit-modal-title');
 const confirmModal = document.getElementById('confirm-modal');
 const confirmSource = document.getElementById('confirm-source');
 const confirmDeleteBtn = document.getElementById('confirm-permanent-delete-btn');
+const toolBar = document.getElementById('toolbar');
+const searchInput = document.getElementById('search-input');
+const exportCsvBtn = document.getElementById('export-csv-btn');
+const selectAllCheckbox = document.getElementById('select-all-checkbox');
+const batchActionbar = document.getElementById('batch-actionbar');
 
 // ========== 工具函数 ==========
 function formatDate(dateString) {
     if (!dateString) return '-';
     const d = new Date(dateString);
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// ========== 排序函数 ==========
+function sortByDate(arr, dateField) {
+    return [...arr].sort((a, b) => {
+        if (!a[dateField] && !b[dateField]) return 0;
+        if (!a[dateField]) return 1;
+        if (!b[dateField]) return -1;
+        return new Date(a[dateField]) - new Date(b[dateField]);
+    });
+}
+
+function getSortedTasks(taskArray) {
+    const dateField = activeCategoryId === 'construction' ? 'startDate' : 'arrivalDate';
+    return sortByDate(taskArray, dateField);
+}
+
+// ========== 搜索过滤 ==========
+function matchesSearch(task, term) {
+    if (!term || term.trim() === '') return true;
+    const lowerTerm = term.toLowerCase().trim();
+
+    if (activeCategoryId === 'construction') {
+        return (
+            (task.name || '').toLowerCase().includes(lowerTerm) ||
+            (task.startDate || '').includes(term.trim()) ||
+            (task.completionDate || '').includes(term.trim()) ||
+            String(task.completionPercentage || '').includes(lowerTerm)
+        );
+    } else {
+        return (
+            (task.billOfLading || '').toLowerCase().includes(lowerTerm) ||
+            (task.arrivalDate || '').includes(term.trim()) ||
+            (task.shippingCompany || '').toLowerCase().includes(lowerTerm) ||
+            (task.projectName || '').toLowerCase().includes(lowerTerm) ||
+            (task.cargoDescription || '').toLowerCase().includes(lowerTerm)
+        );
+    }
+}
+
+function filteredTasks(taskArray) {
+    return taskArray.filter(t => matchesSearch(t, searchTerm));
 }
 
 // ========== 核心操作 (调用 Mock API) ==========
@@ -206,6 +257,45 @@ async function archiveTask(id) {
     }
 }
 
+// ========== 批量归档 ==========
+async function batchArchive(ids) {
+    let success = 0;
+    for (const id of ids) {
+        const task = tasks.find(t => t.id === id);
+        if (task && task.completed) {
+            try {
+                await MockAPI.archiveTask(id);
+                success++;
+            } catch {}
+        }
+    }
+    if (success > 0) {
+        tasks = tasks.filter(t => !ids.includes(t.id) || !t.completed);
+        renderedSelectedIds.clear();
+        showToast(`${success} task(s) archived`);
+        renderAll();
+        await renderSidebar();
+    }
+}
+
+// ========== 批量删除 ==========
+async function batchDelete(ids) {
+    for (const id of ids) {
+        const task = tasks.find(t => t.id === id);
+        if (task) {
+            try {
+                await MockAPI.deleteTask(id);
+                deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
+            } catch {}
+        }
+    }
+    tasks = tasks.filter(t => !ids.includes(t.id));
+    renderedSelectedIds.clear();
+    showToast(`${ids.length} task(s) moved to Deleted`);
+    renderAll();
+    await renderSidebar();
+}
+
 // ========== 从归档恢复任务 ==========
 async function restoreFromArchived(id) {
     try {
@@ -279,6 +369,54 @@ async function handlePermanentDelete(type, id) {
     }
 }
 
+// ========== 导出CSV ==========
+function exportToCSV() {
+    if (tasks.length === 0) {
+        showToast('No tasks to export');
+        return;
+    }
+
+    let csv = '';
+    let headers = [];
+
+    if (activeCategoryId === 'construction') {
+        headers = ['Name', 'Start Date', 'Completion Date', 'Progress (%)', 'Completed'];
+        csv = headers.join(',') + '\n';
+        tasks.forEach(task => {
+            const row = [
+                `"${(task.name || '').replace(/"/g, '""')}"`,
+                task.startDate || '',
+                task.completionDate || '',
+                task.completionPercentage || 0,
+                task.completed ? 'Yes' : 'No'
+            ];
+            csv += row.join(',') + '\n';
+        });
+    } else {
+        headers = ['Bill Of Lading', 'Arrival Date', 'Shipping Company', 'Project Name', 'Cargo Description', 'Completed'];
+        csv = headers.join(',') + '\n';
+        tasks.forEach(task => {
+            const row = [
+                `"${(task.billOfLading || '').replace(/"/g, '""')}"`,
+                task.arrivalDate || '',
+                `"${(task.shippingCompany || '').replace(/"/g, '""')}"`,
+                `"${(task.projectName || '').replace(/"/g, '""')}"`,
+                `"${(task.cargoDescription || '').replace(/"/g, '""')}"`,
+                task.completed ? 'Yes' : 'No'
+            ];
+            csv += row.join(',') + '\n';
+        });
+    }
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${activeCategoryId}_tasks_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast(`Exported ${tasks.length} task(s)`);
+}
+
 // ========== 切换折叠区域 ==========
 function toggleSection(name) {
     if (openSections.has(name)) {
@@ -329,10 +467,22 @@ function showConfirmDelete(type, sourceLabel) {
 
 window.showConfirmDelete = showConfirmDelete;
 
+// ========== 工具提示 ==========
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'error-toast toast-success';
+    toast.textContent = '✅ ' + message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
+
 // ========== 分类切换 ==========
 async function switchCategory(categoryId) {
     if (categoryId === activeCategoryId) return;
     activeCategoryId = categoryId;
+    searchTerm = '';
+    selectedTaskIds.clear();
+    searchInput.value = '';
     renderCategoryHeader();
     renderForm();
     await fetchData();
@@ -520,13 +670,18 @@ function renderActiveList() {
         return;
     }
 
-    if (tasks.length === 0) {
+    // 排序
+    const sorted = getSortedTasks(tasks);
+    // 过滤
+    const filtered = filteredTasks(sorted);
+
+    if (filtered.length === 0) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'empty-state';
-        emptyDiv.textContent = '🎉 No tasks yet — add one to get started!';
+        emptyDiv.textContent = searchTerm ? '🔍 No matching tasks found' : '🎉 No tasks yet — add one to get started!';
         taskList.appendChild(emptyDiv);
     } else {
-        tasks.forEach(task => {
+        filtered.forEach(task => {
             const card = activeCategoryId === 'construction'
                 ? renderConstructionCard(task)
                 : renderClearanceCard(task);
@@ -544,6 +699,14 @@ function renderConstructionCard(task) {
     const top = document.createElement('div');
     top.className = 'task-card-top';
 
+    // 批量选择复选框
+    const selCheckbox = document.createElement('div');
+    selCheckbox.className = 'select-checkbox' + (selectedTaskIds.has(task.id) ? ' checked' : '');
+    selCheckbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTaskSelection(task.id);
+    });
+
     const checkbox = document.createElement('div');
     checkbox.className = 'task-checkbox' + (task.completed ? ' checked' : '');
     checkbox.addEventListener('click', () => toggleTask(task.id));
@@ -559,8 +722,8 @@ function renderConstructionCard(task) {
     if (!task.completed) {
         const editBtn = document.createElement('button');
         editBtn.className = 'action-btn edit-btn';
-        editBtn.innerHTML = '✏️';
         editBtn.title = 'Edit task';
+        editBtn.textContent = '✏️';
         editBtn.addEventListener('click', () => startEdit(task.id));
         buttons.appendChild(editBtn);
     }
@@ -569,8 +732,8 @@ function renderConstructionCard(task) {
     if (task.completed) {
         const archiveBtn = document.createElement('button');
         archiveBtn.className = 'action-btn archive-btn';
-        archiveBtn.innerHTML = '📦';
         archiveBtn.title = 'Archive completed task';
+        archiveBtn.textContent = '📦';
         archiveBtn.addEventListener('click', () => archiveTask(task.id));
         buttons.appendChild(archiveBtn);
     }
@@ -578,11 +741,12 @@ function renderConstructionCard(task) {
     // 删除按钮
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'action-btn confirm-delete-btn';
-    deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = 'Delete task';
+    deleteBtn.textContent = '🗑️';
     deleteBtn.addEventListener('click', () => softDeleteTask(task.id));
     buttons.appendChild(deleteBtn);
 
+    top.appendChild(selCheckbox);
     top.appendChild(checkbox);
     top.appendChild(title);
     top.appendChild(buttons);
@@ -614,6 +778,14 @@ function renderClearanceCard(task) {
     const top = document.createElement('div');
     top.className = 'task-card-top';
 
+    // 批量选择复选框
+    const selCheckbox = document.createElement('div');
+    selCheckbox.className = 'select-checkbox' + (selectedTaskIds.has(task.id) ? ' checked' : '');
+    selCheckbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTaskSelection(task.id);
+    });
+
     const checkbox = document.createElement('div');
     checkbox.className = 'task-checkbox' + (task.completed ? ' checked' : '');
     checkbox.addEventListener('click', () => toggleTask(task.id));
@@ -629,8 +801,8 @@ function renderClearanceCard(task) {
     if (!task.completed) {
         const editBtn = document.createElement('button');
         editBtn.className = 'action-btn edit-btn';
-        editBtn.innerHTML = '✏️';
         editBtn.title = 'Edit task';
+        editBtn.textContent = '✏️';
         editBtn.addEventListener('click', () => startEdit(task.id));
         buttons.appendChild(editBtn);
     }
@@ -639,8 +811,8 @@ function renderClearanceCard(task) {
     if (task.completed) {
         const archiveBtn = document.createElement('button');
         archiveBtn.className = 'action-btn archive-btn';
-        archiveBtn.innerHTML = '📦';
         archiveBtn.title = 'Archive completed task';
+        archiveBtn.textContent = '📦';
         archiveBtn.addEventListener('click', () => archiveTask(task.id));
         buttons.appendChild(archiveBtn);
     }
@@ -648,11 +820,12 @@ function renderClearanceCard(task) {
     // 删除按钮
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'action-btn confirm-delete-btn';
-    deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = 'Delete task';
+    deleteBtn.textContent = '🗑️';
     deleteBtn.addEventListener('click', () => softDeleteTask(task.id));
     buttons.appendChild(deleteBtn);
 
+    top.appendChild(selCheckbox);
     top.appendChild(checkbox);
     top.appendChild(title);
     top.appendChild(buttons);
@@ -678,14 +851,15 @@ function renderClearanceCard(task) {
 // ========== 已归档任务列表渲染 ==========
 function renderArchivedList() {
     archivedList.innerHTML = '';
+    const sortedArchived = getSortedTasks(archivedTasks);
 
-    if (archivedTasks.length === 0) {
+    if (sortedArchived.length === 0) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'section-empty';
         emptyDiv.textContent = 'No completed tasks archived yet';
         archivedList.appendChild(emptyDiv);
     } else {
-        archivedTasks.forEach(task => {
+        sortedArchived.forEach(task => {
             const li = document.createElement('li');
             li.className = 'archived-card';
 
@@ -706,7 +880,7 @@ function renderArchivedList() {
             // 恢复按钮
             const restoreBtn = document.createElement('button');
             restoreBtn.className = 'action-btn restore-btn';
-            restoreBtn.innerHTML = '↩️';
+            restoreBtn.textContent = '↩️';
             restoreBtn.title = 'Restore to active';
             restoreBtn.addEventListener('click', () => restoreFromArchived(task.id));
             buttons.appendChild(restoreBtn);
@@ -714,7 +888,7 @@ function renderArchivedList() {
             // 从归档移至删除
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'action-btn delete-from-archive-btn';
-            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.textContent = '🗑️';
             deleteBtn.title = 'Move to deleted tasks';
             deleteBtn.addEventListener('click', () => moveToDeletedFromArchived(task.id));
             buttons.appendChild(deleteBtn);
@@ -725,9 +899,7 @@ function renderArchivedList() {
 
             const meta = document.createElement('div');
             meta.className = 'task-meta';
-            meta.innerHTML = `
-                <span><strong>Archived:</strong> ${formatDate(task.archived_at)}</span>
-            `;
+            meta.innerHTML = `<span><strong>Archived:</strong> ${formatDate(task.archived_at)}</span>`;
 
             if (activeCategoryId === 'construction') {
                 const progressBar = document.createElement('div');
@@ -760,14 +932,15 @@ function renderArchivedList() {
 // ========== 已删除任务列表渲染 ==========
 function renderDeletedList() {
     deletedList.innerHTML = '';
+    const sortedDeleted = getSortedTasks(deletedTasks);
 
-    if (deletedTasks.length === 0) {
+    if (sortedDeleted.length === 0) {
         const emptyDiv = document.createElement('div');
         emptyDiv.className = 'section-empty';
         emptyDiv.textContent = 'No deleted tasks';
         deletedList.appendChild(emptyDiv);
     } else {
-        deletedTasks.forEach(task => {
+        sortedDeleted.forEach(task => {
             const li = document.createElement('li');
             li.className = 'deleted-card';
 
@@ -785,7 +958,7 @@ function renderDeletedList() {
             // 恢复按钮
             const restoreBtn = document.createElement('button');
             restoreBtn.className = 'action-btn undo-delete-btn';
-            restoreBtn.innerHTML = '↩️';
+            restoreBtn.textContent = '↩️';
             restoreBtn.title = 'Undo delete (restore)';
             restoreBtn.addEventListener('click', () => restoreFromDeleted(task.id));
             buttons.appendChild(restoreBtn);
@@ -793,7 +966,7 @@ function renderDeletedList() {
             // 永久删除按钮
             const deleteForeverBtn = document.createElement('button');
             deleteForeverBtn.className = 'action-btn confirm-delete-btn';
-            deleteForeverBtn.innerHTML = '⚠️';
+            deleteForeverBtn.textContent = '⚠️';
             deleteForeverBtn.title = 'Permanently delete';
             deleteForeverBtn.addEventListener('click', () => {
                 window._pendingDeleteId = task.id;
@@ -806,9 +979,7 @@ function renderDeletedList() {
 
             const meta = document.createElement('div');
             meta.className = 'task-meta';
-            meta.innerHTML = `
-                <span><strong>Deleted:</strong> ${formatDate(task.deleted_at)}</span>
-            `;
+            meta.innerHTML = `<span><strong>Deleted:</strong> ${formatDate(task.deleted_at)}</span>`;
 
             if (activeCategoryId === 'construction') {
                 const progressBar = document.createElement('div');
@@ -843,12 +1014,40 @@ function renderAll() {
     renderActiveList();
     renderArchivedList();
     renderDeletedList();
+    updateBatchActionBar();
 }
 
 function updateStats() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
     statsText.textContent = `${completed} / ${total} tasks completed`;
+}
+
+// ========== 批量选择 ==========
+function toggleTaskSelection(id) {
+    if (selectedTaskIds.has(id)) {
+        selectedTaskIds.delete(id);
+    } else {
+        selectedTaskIds.add(id);
+    }
+    updateBatchActionBar();
+    renderActiveList();
+}
+
+function updateBatchActionBar() {
+    if (toolBar) {
+        const count = selectedTaskIds.size;
+        if (count > 0) {
+            toolBar.style.display = 'flex';
+            toolBar.querySelector('.selection-count').textContent = `${count} selected`;
+            const deleteBtn = toolBar.querySelector('#batch-delete-btn');
+            const archiveBtn = toolBar.querySelector('#batch-archive-btn');
+            if (deleteBtn) deleteBtn.disabled = false;
+            if (archiveBtn) archiveBtn.disabled = false;
+        } else {
+            toolBar.style.display = 'none';
+        }
+    }
 }
 
 // ========== 切换任务完成状态 ==========
@@ -881,6 +1080,61 @@ function showError(message) {
 async function init() {
     renderCategoryHeader();
     renderForm();
+
+    // 绑定事件
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchTerm = e.target.value;
+            selectedTaskIds.clear();
+            renderActiveList();
+            updateBatchActionBar();
+        });
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const sorted = getSortedTasks(tasks);
+            const filtered = filteredTasks(sorted);
+            if (e.target.checked) {
+                filtered.forEach(t => selectedTaskIds.add(t.id));
+            } else {
+                selectedTaskIds.clear();
+            }
+            renderActiveList();
+            updateBatchActionBar();
+        });
+    }
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportToCSV);
+    }
+
+    if (batchActionbar) {
+        const deleteBtn = document.getElementById('batch-delete-btn');
+        const archiveBtn = document.getElementById('batch-archive-btn');
+        const clearBtn = document.getElementById('clear-selection-btn');
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (selectedTaskIds.size === 0) return;
+                await batchDelete([...selectedTaskIds]);
+            });
+        }
+        if (archiveBtn) {
+            archiveBtn.addEventListener('click', async () => {
+                if (selectedTaskIds.size === 0) return;
+                await batchArchive([...selectedTaskIds]);
+            });
+        }
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                selectedTaskIds.clear();
+                renderActiveList();
+                updateBatchActionBar();
+            });
+        }
+    }
+
     await fetchData();
     await renderSidebar();
 }
