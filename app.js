@@ -6,7 +6,10 @@ const CATEGORIES = [
 
 let activeCategoryId = CATEGORIES[0].id;
 let tasks = [];
+let archivedTasks = [];
+let deletedTasks = [];
 let isLoading = false;
+let openSections = new Set();
 
 // ========== DOM 引用 ==========
 const categoryListEl = document.getElementById('category-list');
@@ -15,6 +18,20 @@ const categoryDescEl = document.getElementById('category-desc');
 const formSectionEl = document.getElementById('form-section');
 const taskList = document.getElementById('task-list');
 const statsText = document.getElementById('stats-text');
+const archivedSection = document.getElementById('archived-section');
+const archivedContent = document.getElementById('archived-content');
+const archivedList = document.getElementById('archived-list');
+const archivedCount = document.getElementById('archived-count');
+const deletedSection = document.getElementById('deleted-section');
+const deletedContent = document.getElementById('deleted-content');
+const deletedList = document.getElementById('deleted-list');
+const deletedCount = document.getElementById('deleted-count');
+const editModal = document.getElementById('edit-modal');
+const editForm = document.getElementById('edit-form');
+const editModalTitle = document.getElementById('edit-modal-title');
+const confirmModal = document.getElementById('confirm-modal');
+const confirmSource = document.getElementById('confirm-source');
+const confirmDeleteBtn = document.getElementById('confirm-permanent-delete-btn');
 
 // ========== 工具函数 ==========
 function formatDate(dateString) {
@@ -24,19 +41,25 @@ function formatDate(dateString) {
 }
 
 // ========== 核心操作 (调用 Mock API) ==========
-async function fetchTasks() {
+async function fetchData() {
     isLoading = true;
-    renderTasks();
+    renderAll();
 
     try {
-        const response = await MockAPI.getTasks(activeCategoryId);
-        tasks = response.data;
+        const [tasksRes, archivedRes, deletedRes] = await Promise.all([
+            MockAPI.getTasks(activeCategoryId),
+            MockAPI.getArchived(activeCategoryId),
+            MockAPI.getDeleted(activeCategoryId)
+        ]);
+        tasks = tasksRes.data;
+        archivedTasks = archivedRes.data;
+        deletedTasks = deletedRes.data;
     } catch (err) {
-        console.error('Failed to load tasks:', err);
-        showError('Failed to load tasks');
+        console.error('Failed to load data:', err);
+        showError('Failed to load data');
     } finally {
         isLoading = false;
-        renderTasks();
+        renderAll();
     }
 }
 
@@ -44,7 +67,7 @@ async function addTask(taskData) {
     try {
         const response = await MockAPI.createTask(activeCategoryId, taskData);
         tasks.push(response.data);
-        renderTasks();
+        renderActiveList();
         renderForm();
         await renderSidebar();
     } catch (err) {
@@ -53,34 +76,258 @@ async function addTask(taskData) {
     }
 }
 
-async function deleteTask(id) {
+// ========== 编辑任务 ==========
+async function startEdit(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const isConstruction = activeCategoryId === 'construction';
+    editModalTitle.textContent = '✏️ Edit Task';
+    editForm.innerHTML = '';
+    document.getElementById('edit-task-id').value = id;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'edit-form';
+    wrapper.innerHTML = `<input type="hidden" value="${id}" id="edit-task-id-hidden">`;
+
+    if (isConstruction) {
+        wrapper.innerHTML += `
+            <div class="form-group">
+                <label>Task Name</label>
+                <input type="text" id="edit-name" value="${task.name || ''}" required>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="edit-startDate" value="${task.startDate || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Completion Date</label>
+                    <input type="date" id="edit-completionDate" value="${task.completionDate || ''}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Completion Percentage</label>
+                <div class="range-row">
+                    <input type="range" id="edit-completionPercentage" min="0" max="100" value="${task.completionPercentage || 0}">
+                    <span class="range-value" id="edit-rangeValue">${task.completionPercentage || 0}%</span>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn edit-submit-btn">Save Changes</button>
+        `;
+    } else {
+        wrapper.innerHTML += `
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>Arrival Date</label>
+                    <input type="date" id="edit-arrivalDate" value="${task.arrivalDate || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Bill of Lading No.</label>
+                    <input type="text" id="edit-billOfLading" value="${task.billOfLading || ''}" required>
+                </div>
+            </div>
+            <div class="form-row two-col">
+                <div class="form-group">
+                    <label>Shipping Company</label>
+                    <input type="text" id="edit-shippingCompany" value="${task.shippingCompany || ''}" required>
+                </div>
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" id="edit-projectName" value="${task.projectName || ''}" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Cargo Description</label>
+                <input type="text" id="edit-cargoDescription" value="${task.cargoDescription || ''}" required>
+            </div>
+            <button type="submit" class="submit-btn edit-submit-btn">Save Changes</button>
+        `;
+    }
+
+    editForm.appendChild(wrapper);
+
+    // Range input event
+    const rangeInput = wrapper.querySelector('#edit-completionPercentage');
+    const rangeValue = wrapper.querySelector('#edit-rangeValue');
+    if (rangeInput && rangeValue) {
+        rangeInput.addEventListener('input', e => rangeValue.textContent = e.target.value + '%');
+    }
+
+    editForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const submitBtn = wrapper.querySelector('.edit-submit-btn');
+        submitBtn.disabled = true;
+
+        const updates = {};
+        if (isConstruction) {
+            updates.name = wrapper.querySelector('#edit-name').value.trim();
+            updates.startDate = wrapper.querySelector('#edit-startDate').value;
+            updates.completionDate = wrapper.querySelector('#edit-completionDate').value;
+            updates.completionPercentage = parseInt(wrapper.querySelector('#edit-completionPercentage').value, 10);
+        } else {
+            updates.arrivalDate = wrapper.querySelector('#edit-arrivalDate').value;
+            updates.billOfLading = wrapper.querySelector('#edit-billOfLading').value.trim();
+            updates.shippingCompany = wrapper.querySelector('#edit-shippingCompany').value.trim();
+            updates.projectName = wrapper.querySelector('#edit-projectName').value.trim();
+            updates.cargoDescription = wrapper.querySelector('#edit-cargoDescription').value.trim();
+        }
+
+        try {
+            await MockAPI.updateTask(id, updates);
+            const idx = tasks.findIndex(t => t.id === id);
+            if (idx !== -1) Object.assign(tasks[idx], updates);
+            renderActiveList();
+            closeModal(editModal);
+        } catch (err) {
+            console.error('Failed to update task:', err);
+            showError('Failed to update task');
+        } finally {
+            submitBtn.disabled = false;
+        }
+    };
+
+    openModal(editModal);
+}
+
+// ========== 归档已完成任务 ==========
+async function archiveTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task || !task.completed) return;
+
+    try {
+        await MockAPI.archiveTask(id);
+        tasks = tasks.filter(t => t.id !== id);
+        archivedTasks.push(task);
+        renderAll();
+    } catch (err) {
+        console.error('Failed to archive task:', err);
+        showError('Failed to archive task');
+    }
+}
+
+// ========== 从归档恢复任务 ==========
+async function restoreFromArchived(id) {
+    try {
+        await MockAPI.unarchiveTask(id);
+        const task = archivedTasks.find(t => t.id === id);
+        archivedTasks = archivedTasks.filter(t => t.id !== id);
+        tasks.push(task);
+        renderAll();
+    } catch (err) {
+        console.error('Failed to restore task:', err);
+        showError('Failed to restore task');
+    }
+}
+
+// ========== 从归档移到删除 ==========
+async function moveToDeletedFromArchived(id) {
+    try {
+        await MockAPI.deleteFromArchived(id);
+        const task = archivedTasks.find(t => t.id === id);
+        archivedTasks = archivedTasks.filter(t => t.id !== id);
+        deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
+        renderAll();
+    } catch (err) {
+        console.error('Failed to delete from archived:', err);
+        showError('Failed to move task to deleted');
+    }
+}
+
+// ========== 软删除 ==========
+async function softDeleteTask(id) {
     try {
         await MockAPI.deleteTask(id);
+        const task = tasks.find(t => t.id === id);
         tasks = tasks.filter(t => t.id !== id);
-        renderTasks();
-        await renderSidebar();
+        deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
+        renderAll();
     } catch (err) {
         console.error('Failed to delete task:', err);
         showError('Failed to delete task');
     }
 }
 
-async function toggleTask(id) {
-    const task = tasks.find(t => t.id === id);
-    if (!task) return;
-
-    const newCompleted = !task.completed;
-
+// ========== 从已删除恢复 ==========
+async function restoreFromDeleted(id) {
     try {
-        await MockAPI.updateTask(id, { completed: newCompleted });
-        task.completed = newCompleted;
-        renderTasks();
-        await renderSidebar();
+        await MockAPI.undeleteTask(id);
+        const task = deletedTasks.find(t => t.id === id);
+        deletedTasks = deletedTasks.filter(t => t.id !== id);
+        tasks.push(task);
+        renderAll();
     } catch (err) {
-        console.error('Failed to toggle task:', err);
-        showError('Failed to update task');
+        console.error('Failed to restore deleted task:', err);
+        showError('Failed to restore task');
     }
 }
+
+// ========== 永久删除（确认中处理） ==========
+async function handlePermanentDelete(type, id) {
+    try {
+        await MockAPI.permanentDelete(type, id);
+        if (type === 'archived') {
+            archivedTasks = archivedTasks.filter(t => t.id !== id);
+        } else {
+            deletedTasks = deletedTasks.filter(t => t.id !== id);
+        }
+        closeModal(confirmModal);
+        renderAll();
+    } catch (err) {
+        console.error('Failed to permanently delete:', err);
+        showError('Failed to permanently delete');
+    }
+}
+
+// ========== 切换折叠区域 ==========
+function toggleSection(name) {
+    if (openSections.has(name)) {
+        openSections.delete(name);
+        if (name === 'archived') {
+            archivedContent.classList.remove('open');
+            archivedSection.querySelector('.toggle-icon').classList.remove('open');
+        } else {
+            deletedContent.classList.remove('open');
+            deletedSection.querySelector('.toggle-icon').classList.remove('open');
+        }
+    } else {
+        openSections.add(name);
+        if (name === 'archived') {
+            archivedContent.classList.add('open');
+            archivedSection.querySelector('.toggle-icon').classList.add('open');
+        } else {
+            deletedContent.classList.add('open');
+            deletedSection.querySelector('.toggle-icon').classList.add('open');
+        }
+    }
+}
+
+// ========== 模态框 ==========
+function openModal(modal) {
+    modal.style.display = 'flex';
+}
+
+function closeModal(modal) {
+    modal.style.display = 'none';
+    if (modal === editModal) {
+        editForm.onsubmit = null;
+        editForm.innerHTML = '';
+    }
+    if (modal === confirmModal) {
+        confirmDeleteBtn.onclick = null;
+    }
+}
+
+window.toggleSection = toggleSection;
+window.closeEditModal = () => closeModal(editModal);
+
+function showConfirmDelete(type, sourceLabel) {
+    confirmSource.textContent = sourceLabel;
+    confirmDeleteBtn.onclick = () => handlePermanentDelete(type, window._pendingDeleteId);
+    openModal(confirmModal);
+}
+
+window.showConfirmDelete = showConfirmDelete;
 
 // ========== 分类切换 ==========
 async function switchCategory(categoryId) {
@@ -88,7 +335,7 @@ async function switchCategory(categoryId) {
     activeCategoryId = categoryId;
     renderCategoryHeader();
     renderForm();
-    await fetchTasks();
+    await fetchData();
     await renderSidebar();
 }
 
@@ -261,7 +508,8 @@ function createClearanceForm() {
     return form;
 }
 
-function renderTasks() {
+// ========== 活跃任务列表渲染 ==========
+function renderActiveList() {
     taskList.innerHTML = '';
 
     if (isLoading) {
@@ -304,15 +552,40 @@ function renderConstructionCard(task) {
     title.className = 'task-title' + (task.completed ? ' completed' : '');
     title.textContent = task.name;
 
+    const buttons = document.createElement('div');
+    buttons.className = 'action-buttons';
+
+    // 编辑按钮（未完成的任务才能编辑）
+    if (!task.completed) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn edit-btn';
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit task';
+        editBtn.addEventListener('click', () => startEdit(task.id));
+        buttons.appendChild(editBtn);
+    }
+
+    // 归档按钮（仅已完成的任务）
+    if (task.completed) {
+        const archiveBtn = document.createElement('button');
+        archiveBtn.className = 'action-btn archive-btn';
+        archiveBtn.innerHTML = '📦';
+        archiveBtn.title = 'Archive completed task';
+        archiveBtn.addEventListener('click', () => archiveTask(task.id));
+        buttons.appendChild(archiveBtn);
+    }
+
+    // 删除按钮
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = '✕';
+    deleteBtn.className = 'action-btn confirm-delete-btn';
+    deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = 'Delete task';
-    deleteBtn.addEventListener('click', () => deleteTask(task.id));
+    deleteBtn.addEventListener('click', () => softDeleteTask(task.id));
+    buttons.appendChild(deleteBtn);
 
     top.appendChild(checkbox);
     top.appendChild(title);
-    top.appendChild(deleteBtn);
+    top.appendChild(buttons);
 
     const meta = document.createElement('div');
     meta.className = 'task-meta';
@@ -349,15 +622,40 @@ function renderClearanceCard(task) {
     title.className = 'task-title' + (task.completed ? ' completed' : '');
     title.textContent = task.billOfLading;
 
+    const buttons = document.createElement('div');
+    buttons.className = 'action-buttons';
+
+    // 编辑按钮（未完成的任务才能编辑）
+    if (!task.completed) {
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn edit-btn';
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit task';
+        editBtn.addEventListener('click', () => startEdit(task.id));
+        buttons.appendChild(editBtn);
+    }
+
+    // 归档按钮（仅已完成的任务）
+    if (task.completed) {
+        const archiveBtn = document.createElement('button');
+        archiveBtn.className = 'action-btn archive-btn';
+        archiveBtn.innerHTML = '📦';
+        archiveBtn.title = 'Archive completed task';
+        archiveBtn.addEventListener('click', () => archiveTask(task.id));
+        buttons.appendChild(archiveBtn);
+    }
+
+    // 删除按钮
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.textContent = '✕';
+    deleteBtn.className = 'action-btn confirm-delete-btn';
+    deleteBtn.innerHTML = '🗑️';
     deleteBtn.title = 'Delete task';
-    deleteBtn.addEventListener('click', () => deleteTask(task.id));
+    deleteBtn.addEventListener('click', () => softDeleteTask(task.id));
+    buttons.appendChild(deleteBtn);
 
     top.appendChild(checkbox);
     top.appendChild(title);
-    top.appendChild(deleteBtn);
+    top.appendChild(buttons);
 
     const meta = document.createElement('div');
     meta.className = 'task-meta clearance-meta';
@@ -377,10 +675,198 @@ function renderClearanceCard(task) {
     return li;
 }
 
+// ========== 已归档任务列表渲染 ==========
+function renderArchivedList() {
+    archivedList.innerHTML = '';
+
+    if (archivedTasks.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'section-empty';
+        emptyDiv.textContent = 'No completed tasks archived yet';
+        archivedList.appendChild(emptyDiv);
+    } else {
+        archivedTasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = 'archived-card';
+
+            const top = document.createElement('div');
+            top.className = 'task-card-top';
+
+            const checkbox = document.createElement('div');
+            checkbox.className = 'task-checkbox checked';
+
+            const title = document.createElement('h3');
+            title.className = 'task-title completed';
+            const taskName = activeCategoryId === 'construction' ? task.name : task.billOfLading;
+            title.textContent = taskName;
+
+            const buttons = document.createElement('div');
+            buttons.className = 'action-buttons';
+
+            // 恢复按钮
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'action-btn restore-btn';
+            restoreBtn.innerHTML = '↩️';
+            restoreBtn.title = 'Restore to active';
+            restoreBtn.addEventListener('click', () => restoreFromArchived(task.id));
+            buttons.appendChild(restoreBtn);
+
+            // 从归档移至删除
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'action-btn delete-from-archive-btn';
+            deleteBtn.innerHTML = '🗑️';
+            deleteBtn.title = 'Move to deleted tasks';
+            deleteBtn.addEventListener('click', () => moveToDeletedFromArchived(task.id));
+            buttons.appendChild(deleteBtn);
+
+            top.appendChild(checkbox);
+            top.appendChild(title);
+            top.appendChild(buttons);
+
+            const meta = document.createElement('div');
+            meta.className = 'task-meta';
+            meta.innerHTML = `
+                <span><strong>Archived:</strong> ${formatDate(task.archived_at)}</span>
+            `;
+
+            if (activeCategoryId === 'construction') {
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.innerHTML = `
+                    <div class="progress-fill" style="width: ${task.completionPercentage || 0}%"></div>
+                    <span class="progress-text">${task.completionPercentage || 0}%</span>
+                `;
+                li.appendChild(top);
+                li.appendChild(meta);
+                li.appendChild(progressBar);
+            } else {
+                const desc = document.createElement('div');
+                desc.className = 'task-description';
+                desc.textContent = task.cargoDescription;
+                meta.innerHTML += `<span><strong>Project:</strong> ${task.projectName || '-'}</span>`;
+                li.appendChild(top);
+                li.appendChild(meta);
+                li.appendChild(desc);
+            }
+
+            archivedList.appendChild(li);
+        });
+    }
+
+    archivedCount.textContent = archivedTasks.length;
+    archivedSection.style.display = archivedTasks.length > 0 ? 'block' : 'none';
+}
+
+// ========== 已删除任务列表渲染 ==========
+function renderDeletedList() {
+    deletedList.innerHTML = '';
+
+    if (deletedTasks.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'section-empty';
+        emptyDiv.textContent = 'No deleted tasks';
+        deletedList.appendChild(emptyDiv);
+    } else {
+        deletedTasks.forEach(task => {
+            const li = document.createElement('li');
+            li.className = 'deleted-card';
+
+            const top = document.createElement('div');
+            top.className = 'task-card-top';
+
+            const title = document.createElement('h3');
+            title.className = 'task-title';
+            const taskName = activeCategoryId === 'construction' ? task.name : task.billOfLading;
+            title.textContent = taskName;
+
+            const buttons = document.createElement('div');
+            buttons.className = 'action-buttons';
+
+            // 恢复按钮
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'action-btn undo-delete-btn';
+            restoreBtn.innerHTML = '↩️';
+            restoreBtn.title = 'Undo delete (restore)';
+            restoreBtn.addEventListener('click', () => restoreFromDeleted(task.id));
+            buttons.appendChild(restoreBtn);
+
+            // 永久删除按钮
+            const deleteForeverBtn = document.createElement('button');
+            deleteForeverBtn.className = 'action-btn confirm-delete-btn';
+            deleteForeverBtn.innerHTML = '⚠️';
+            deleteForeverBtn.title = 'Permanently delete';
+            deleteForeverBtn.addEventListener('click', () => {
+                window._pendingDeleteId = task.id;
+                showConfirmDelete('deleted', 'Deleted Tasks List');
+            });
+            buttons.appendChild(deleteForeverBtn);
+
+            top.appendChild(title);
+            top.appendChild(buttons);
+
+            const meta = document.createElement('div');
+            meta.className = 'task-meta';
+            meta.innerHTML = `
+                <span><strong>Deleted:</strong> ${formatDate(task.deleted_at)}</span>
+            `;
+
+            if (activeCategoryId === 'construction') {
+                const progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                progressBar.innerHTML = `
+                    <div class="progress-fill" style="width: ${task.completionPercentage || 0}%"></div>
+                    <span class="progress-text">${task.completionPercentage || 0}%</span>
+                `;
+                li.appendChild(top);
+                li.appendChild(meta);
+                li.appendChild(progressBar);
+            } else {
+                const desc = document.createElement('div');
+                desc.className = 'task-description';
+                desc.textContent = task.cargoDescription;
+                meta.innerHTML += `<span><strong>Project:</strong> ${task.projectName || '-'}</span>`;
+                li.appendChild(top);
+                li.appendChild(meta);
+                li.appendChild(desc);
+            }
+
+            deletedList.appendChild(li);
+        });
+    }
+
+    deletedCount.textContent = deletedTasks.length;
+    deletedSection.style.display = deletedTasks.length > 0 ? 'block' : 'none';
+}
+
+// ========== 全量重新渲染 ==========
+function renderAll() {
+    renderActiveList();
+    renderArchivedList();
+    renderDeletedList();
+}
+
 function updateStats() {
     const total = tasks.length;
     const completed = tasks.filter(t => t.completed).length;
     statsText.textContent = `${completed} / ${total} tasks completed`;
+}
+
+// ========== 切换任务完成状态 ==========
+async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newCompleted = !task.completed;
+
+    try {
+        await MockAPI.updateTask(id, { completed: newCompleted });
+        task.completed = newCompleted;
+        renderAll();
+        await renderSidebar();
+    } catch (err) {
+        console.error('Failed to toggle task:', err);
+        showError('Failed to update task');
+    }
 }
 
 function showError(message) {
@@ -395,7 +881,7 @@ function showError(message) {
 async function init() {
     renderCategoryHeader();
     renderForm();
-    await fetchTasks();
+    await fetchData();
     await renderSidebar();
 }
 

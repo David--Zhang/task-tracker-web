@@ -10,7 +10,7 @@
     <aside class="sidebar">
         <div class="sidebar-header">
             <h2>📋 Task Tracker</h2>
-            <p>Track tasks by category</p>
+            <p>Track & organize tasks</p>
         </div>
         <ul class="category-list" id="category-list">
             <!-- Rendered by JS -->
@@ -34,8 +34,61 @@
             <div class="task-stats">
                 <span id="stats-text">0 / 0 tasks completed</span>
             </div>
+
+            <!-- ========== 已完成任务折叠区 ========== -->
+            <div id="archived-section" class="collapsible-section" style="display:none;">
+                <button type="button" class="section-toggle" onclick="toggleSection('archived')">
+                    <span class="toggle-icon">▼</span>
+                    <span class="section-title">📦 Completed Tasks (<span id="archived-count">0</span>)</span>
+                </button>
+                <div class="section-content" id="archived-content">
+                    <ul id="archived-list"></ul>
+                </div>
+            </div>
+
+            <!-- ========== 已删除任务折叠区 ========== -->
+            <div id="deleted-section" class="collapsible-section" style="display:none;">
+                <button type="button" class="section-toggle" onclick="toggleSection('deleted')">
+                    <span class="toggle-icon">▼</span>
+                    <span class="section-title">🗑️ Deleted Tasks (<span id="deleted-count">0</span>)</span>
+                </button>
+                <div class="section-content" id="deleted-content">
+                    <ul id="deleted-list"></ul>
+                </div>
+            </div>
         </div>
     </main>
+
+    <!-- ========== 编辑任务模态框 ========== -->
+    <div id="edit-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="edit-modal-title">Edit Task</h3>
+                <button class="modal-close" onclick="closeEditModal()">✕</button>
+            </div>
+            <form id="edit-form" class="edit-form">
+                <input type="hidden" id="edit-task-id">
+                <!-- Rendered by JS -->
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== 永久删除确认对话框 ========== -->
+    <div id="confirm-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-container modal-small">
+            <div class="modal-header modal-header-danger">
+                <h3>⚠️ Permanent Delete</h3>
+            </div>
+            <div class="modal-body">
+                <p>This will permanently delete this task. This action cannot be undone.</p>
+                <p class="modal-source-label">Source: <span id="confirm-source"></span></p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+                <button type="button" class="btn-danger" id="confirm-permanent-delete-btn">Delete Forever</button>
+            </div>
+        </div>
+    </div>
 
     <script src="mock-api.js"></script>
     <script src="app.js"></script>
