@@ -120,32 +120,84 @@ body {
     padding: 24px;
     border-radius: 12px;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-    max-width: 640px;
+    max-width: 720px;
 }
 
-/* ========== 输入区域 ========== */
-.input-section {
-    display: flex;
-    gap: 10px;
+/* ========== 表单 ========== */
+.form-section {
     margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
 }
 
-#task-input {
-    flex: 1;
-    padding: 10px 14px;
+.task-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.form-row {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.form-row.two-col .form-group {
+    flex: 1 1 calc(50% - 7px);
+    min-width: 160px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1 1 100%;
+}
+
+.form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 10px 12px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
     font-size: 14px;
-    transition: border-color 0.2s;
     outline: none;
+    transition: border-color 0.2s;
 }
 
-#task-input:focus {
+.form-group input:focus,
+.form-group select:focus {
     border-color: #28a745;
 }
 
-#add-task-btn {
-    padding: 10px 20px;
+.range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.range-row input[type="range"] {
+    flex: 1;
+    cursor: pointer;
+}
+
+.range-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: #28a745;
+    min-width: 40px;
+    text-align: right;
+}
+
+.submit-btn {
+    padding: 12px 20px;
     background-color: #28a745;
     color: white;
     border: none;
@@ -154,15 +206,94 @@ body {
     font-size: 14px;
     font-weight: 600;
     transition: background-color 0.2s;
-    white-space: nowrap;
+    margin-top: 4px;
 }
 
-#add-task-btn:hover {
+.submit-btn:hover {
     background-color: #218838;
 }
 
-#add-task-btn:active {
-    background-color: #1e7e34;
+.submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ========== 项目管理 ========== */
+.project-management {
+    padding: 16px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.project-management h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.project-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.project-input-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+}
+
+.project-input-row input:focus {
+    border-color: #28a745;
+}
+
+.project-input-row button {
+    padding: 8px 14px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.project-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.project-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.project-tag button {
+    background: none;
+    border: none;
+    color: #c62828;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0 2px;
+    margin-left: 2px;
+}
+
+.project-tag button:hover {
+    color: #b71c1c;
 }
 
 /* ========== 任务列表 ========== */
@@ -170,33 +301,93 @@ body {
     list-style: none;
     padding: 0;
     margin: 0 0 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 #task-list li {
-    padding: 12px 10px;
-    background: #f9f9f9;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: background-color 0.2s;
-}
-
-#task-list li:first-child {
-    border-radius: 8px 8px 0 0;
-}
-
-#task-list li:last-child {
-    border-radius: 0 0 8px 8px;
+    padding: 0;
     border-bottom: none;
 }
 
-#task-list li:only-child {
+/* 旧版兼容 */
+#task-list li.task-card {
+    background: #f9f9f9;
     border-radius: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
 }
 
-#task-list li:hover {
-    background-color: #f0f0f0;
+#task-list li.task-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.task-card-top {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.task-title {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.task-title.completed {
+    text-decoration: line-through;
+    color: #aaa;
+}
+
+.task-meta {
+    display: flex;
+    gap: 16px;
+    padding: 0 16px 14px 48px;
+    font-size: 13px;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.task-meta span strong {
+    color: #444;
+}
+
+.task-description {
+    padding: 0 16px 14px 48px;
+    font-size: 13px;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* 进度条 */
+.progress-bar {
+    position: relative;
+    height: 20px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    margin: 0 16px 16px 48px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #34ce57);
+    border-radius: 10px;
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 700;
+    color: #333;
 }
 
 /* 自定义复选框 */
@@ -227,21 +418,6 @@ body {
     color: white;
     font-size: 12px;
     font-weight: bold;
-}
-
-/* 任务文本 */
-.task-text {
-    flex: 1;
-    font-size: 14px;
-    color: #333;
-    cursor: pointer;
-    word-break: break-word;
-    transition: all 0.2s;
-}
-
-.task-text.completed {
-    text-decoration: line-through;
-    color: #aaa;
 }
 
 /* 删除按钮 */
@@ -377,5 +553,18 @@ button:disabled {
     }
     .main-content {
         padding: 20px 16px;
+    }
+    .app-container {
+        padding: 16px;
+    }
+    .form-row.two-col {
+        flex-direction: column;
+    }
+    .form-row.two-col .form-group {
+        flex: 1 1 100%;
+    }
+    .task-meta {
+        flex-direction: column;
+        gap: 6px;
     }
 }

@@ -24,9 +24,17 @@
         </div>
 
         <div class="app-container">
-            <div class="input-section">
-                <input type="text" id="task-input" placeholder="Enter a new task..." autofocus>
-                <button id="add-task-btn">Add</button>
+            <div id="form-section" class="form-section">
+                <!-- Rendered by JS -->
+            </div>
+
+            <div id="project-management" class="project-management" style="display: none;">
+                <h4>Projects</h4>
+                <div class="project-input-row">
+                    <input type="text" id="new-project-name" placeholder="New project name...">
+                    <button id="add-project-btn" type="button">Add Project</button>
+                </div>
+                <div id="project-list" class="project-list"></div>
             </div>
 
             <ul id="task-list">
