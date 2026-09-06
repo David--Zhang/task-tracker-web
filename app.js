@@ -1,35 +1,12 @@
-// ========== 分类定义 ==========
+// ========== 状态管理 ==========
 const CATEGORIES = [
     { id: 'construction', name: 'Construction', icon: '🏗️', description: 'Construction project tasks' },
     { id: 'custom-clearance', name: 'Custom Clearance', icon: '📦', description: 'Custom clearance process tasks' }
 ];
 
 let activeCategoryId = CATEGORIES[0].id;
-
-// ========== 数据模型 ==========
-function getStorageKey(categoryId) {
-    return 'task-tracker-tasks-' + categoryId;
-}
-
-function loadTasks(categoryId) {
-    try {
-        const data = localStorage.getItem(getStorageKey(categoryId));
-        return data ? JSON.parse(data) : [];
-    } catch {
-        return [];
-    }
-}
-
-function saveTasks(categoryId, tasks) {
-    localStorage.setItem(getStorageKey(categoryId), JSON.stringify(tasks));
-}
-
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-}
-
-// 当前分类的任务（在切换分类时重新加载）
-let tasks = loadTasks(activeCategoryId);
+let tasks = [];
+let isLoading = false;
 
 // ========== DOM 引用 ==========
 const categoryListEl = document.getElementById('category-list');
@@ -40,72 +17,121 @@ const addTaskBtn = document.getElementById('add-task-btn');
 const taskList = document.getElementById('task-list');
 const statsText = document.getElementById('stats-text');
 
-// ========== 核心操作 ==========
-function addTask(text) {
-    const task = { id: generateId(), text, completed: false };
-    tasks.push(task);
-    saveTasks(activeCategoryId, tasks);
+// ========== 核心操作 (调用 Mock API) ==========
+async function fetchTasks() {
+    isLoading = true;
     renderTasks();
-    renderSidebar();
-}
 
-function deleteTask(id) {
-    tasks = tasks.filter(t => t.id !== id);
-    saveTasks(activeCategoryId, tasks);
-    renderTasks();
-    renderSidebar();
-}
-
-function toggleTask(id) {
-    const task = tasks.find(t => t.id === id);
-    if (task) {
-        task.completed = !task.completed;
-        saveTasks(activeCategoryId, tasks);
+    try {
+        const response = await MockAPI.getTasks(activeCategoryId);
+        tasks = response.data;
+    } catch (err) {
+        console.error('Failed to load tasks:', err);
+        showError('Failed to load tasks');
+    } finally {
+        isLoading = false;
         renderTasks();
-        renderSidebar();
+    }
+}
+
+async function addTask(text) {
+    taskInput.disabled = true;
+    addTaskBtn.disabled = true;
+
+    try {
+        const response = await MockAPI.createTask(activeCategoryId, text);
+        tasks.push(response.data);
+        taskInput.value = '';
+        renderTasks();
+        await renderSidebar();
+    } catch (err) {
+        console.error('Failed to add task:', err);
+        showError('Failed to add task');
+    } finally {
+        taskInput.disabled = false;
+        addTaskBtn.disabled = false;
+        taskInput.focus();
+    }
+}
+
+async function deleteTask(id) {
+    try {
+        await MockAPI.deleteTask(id);
+        tasks = tasks.filter(t => t.id !== id);
+        renderTasks();
+        await renderSidebar();
+    } catch (err) {
+        console.error('Failed to delete task:', err);
+        showError('Failed to delete task');
+    }
+}
+
+async function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newCompleted = !task.completed;
+
+    try {
+        await MockAPI.updateTask(id, { completed: newCompleted });
+        task.completed = newCompleted;
+        renderTasks();
+        await renderSidebar();
+    } catch (err) {
+        console.error('Failed to toggle task:', err);
+        showError('Failed to update task');
     }
 }
 
 // ========== 分类切换 ==========
-function switchCategory(categoryId) {
+async function switchCategory(categoryId) {
     if (categoryId === activeCategoryId) return;
     activeCategoryId = categoryId;
-    tasks = loadTasks(activeCategoryId);
-    renderSidebar();
-    renderCategoryHeader();
-    renderTasks();
     taskInput.value = '';
-    taskInput.focus();
+    renderCategoryHeader();
+    await fetchTasks();
+    await renderSidebar();
 }
 
 // ========== 渲染 ==========
-function renderSidebar() {
+async function renderSidebar() {
     categoryListEl.innerHTML = '';
-    CATEGORIES.forEach(cat => {
-        const li = document.createElement('li');
-        li.className = 'category-item' + (cat.id === activeCategoryId ? ' active' : '');
 
-        const icon = document.createElement('span');
-        icon.className = 'category-icon';
-        icon.textContent = cat.icon;
+    try {
+        const response = await MockAPI.getCategories();
+        const categories = response.data;
 
-        const name = document.createElement('span');
-        name.textContent = cat.name;
+        categories.forEach(cat => {
+            const li = document.createElement('li');
+            li.className = 'category-item' + (cat.id === activeCategoryId ? ' active' : '');
 
-        const catTasks = loadTasks(cat.id);
-        const completed = catTasks.filter(t => t.completed).length;
-        const total = catTasks.length;
+            const icon = document.createElement('span');
+            icon.className = 'category-icon';
+            icon.textContent = cat.icon;
 
-        const badge = document.createElement('span');
-        badge.className = 'category-badge';
-        badge.textContent = `${completed}/${total}`;
+            const name = document.createElement('span');
+            name.textContent = cat.name;
 
-        li.appendChild(icon);
-        li.appendChild(name);
-        li.appendChild(badge);
-        li.addEventListener('click', () => switchCategory(cat.id));
-        categoryListEl.appendChild(li);
-    });
+            const badge = document.createElement('span');
+            badge.className = 'category-badge';
+            badge.textContent = `${cat.completed}/${cat.total}`;
+
+            li.appendChild(icon);
+            li.appendChild(name);
+            li.appendChild(badge);
+            li.addEventListener('click', () => switchCategory(cat.id));
+            categoryListEl.appendChild(li);
+        });
+    } catch (err) {
+        console.error('Failed to load categories:', err);
+        CATEGORIES.forEach(cat => {
+            const li = document.createElement('li');
+            li.className = 'category-item' + (cat.id === activeCategoryId ? ' active' : '');
+            li.innerHTML = `<span class="category-icon">${cat.icon}</span><span>${cat.name}</span>`;
+            li.addEventListener('click', () => switchCategory(cat.id));
+            categoryListEl.appendChild(li);
+        });
+    }
 }
 
 function renderCategoryHeader() {
@@ -118,6 +144,14 @@ function renderCategoryHeader() {
 
 function renderTasks() {
     taskList.innerHTML = '';
+
+    if (isLoading) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading-state';
+        loadingDiv.innerHTML = '<div class="spinner"></div><span>Loading tasks...</span>';
+        taskList.appendChild(loadingDiv);
+        return;
+    }
 
     if (tasks.length === 0) {
         const emptyDiv = document.createElement('div');
@@ -159,6 +193,14 @@ function updateStats() {
     statsText.textContent = `${completed} / ${total} tasks completed`;
 }
 
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-toast';
+    errorDiv.textContent = '⚠ ' + message;
+    document.body.appendChild(errorDiv);
+    setTimeout(() => errorDiv.remove(), 3000);
+}
+
 // ========== 事件绑定 ==========
 addTaskBtn.addEventListener('click', () => {
     const taskText = taskInput.value.trim();
@@ -167,8 +209,6 @@ addTaskBtn.addEventListener('click', () => {
         return;
     }
     addTask(taskText);
-    taskInput.value = '';
-    taskInput.focus();
 });
 
 taskInput.addEventListener('keydown', (e) => {
@@ -178,6 +218,6 @@ taskInput.addEventListener('keydown', (e) => {
 });
 
 // ========== 初始化 ==========
-renderSidebar();
 renderCategoryHeader();
-renderTasks();
+fetchTasks();
+renderSidebar();
