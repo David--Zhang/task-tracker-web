@@ -50,7 +50,7 @@ Phase 1 (当前 MVP)              Phase 2 (后端化)
 |------|---------|------|
 | **前端** | HTML + CSS + Vanilla JS | 无框架依赖，轻量快速 |
 | **后端** | Node.js + Express | RESTful JSON API |
-| **数据库** | SQLite (better-sqlite3) | 文件型数据库，零配置 |
+| **数据库** | SQLite (`node:sqlite`) | 文件型数据库，零配置；使用 Node 内置驱动，无原生依赖 |
 | **开发工具** | npm + nodemon | 热重载开发体验 |
 
 ### 2.3 目录结构规划
@@ -60,19 +60,27 @@ task-tracker-web/
 ├── public/                 # 前端静态文件
 │   ├── index.html
 │   ├── style.css
-│   └── app.js
+│   ├── app.js              # 前端业务逻辑（调用 window.API）
+│   └── api.js              # fetch 客户端（对接真实后端）
 ├── server/                 # 后端代码
-│   ├── index.js            # Express 入口
-│   ├── db.js               # 数据库初始化与连接
+│   ├── index.js            # Express 入口 + 静态托管 + 统一错误处理
+│   ├── db.js               # SQLite 连接、schema、种子、校验
 │   └── routes/
-│       └── tasks.js        # 任务相关路由
-├── data/                   # SQLite 数据库文件
+│       ├── tasks.js        # 任务路由（CRUD + 归档/软删除/恢复/永久删除）
+│       └── categories.js   # 分类路由（含统计）
+├── data/                   # SQLite 数据库文件（gitignore，运行时自动生成）
 │   └── tasks.db
-├── test.js                 # 前端单元测试
+├── test.js                 # 前端核心逻辑单元测试
+├── test-mock-api.js        # MockAPI 契约测试（Demo 阶段接口参考）
+├── test-server.js          # 后端测试（DB 层 + HTTP 层）
 ├── package.json
 ├── DESIGN.md               # 本文档
 └── AGENTS.md
 ```
+
+> ⚠️ **技术选型调整**：DESIGN.md 原规划使用 `better-sqlite3`，但其实装依赖包含原生编译步骤，
+> 在当前沙箱环境下会触发子进程限制。因此改用 Node.js 内置的 `node:sqlite` 驱动
+> （Node ≥ 22.5 可用），功能等价、零原生依赖。其余技术栈（Express、目录结构、API 设计）保持不变。
 
 ---
 
@@ -277,7 +285,7 @@ async function fetchTasks(categoryId) {
 ```
 [v1.0] ✅ 前端 MVP — 单分类任务管理 (localStorage)
 [v1.1] ✅ 侧边栏双分类 — Construction + Custom Clearance
-[v2.0] 🔜 后端化 — REST API + SQLite + 前端接入
+[v2.0] ✅ 后端化 — REST API + SQLite + 前端接入
 [v2.1] 📋 任务编辑 + 优先级
 [v3.0] 📋 多用户 + 实时同步
 ```

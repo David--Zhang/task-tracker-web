@@ -97,16 +97,16 @@ async function fetchData() {
 
     try {
         const [tasksRes, archivedRes, deletedRes] = await Promise.all([
-            MockAPI.getTasks(activeCategoryId),
-            MockAPI.getArchived(activeCategoryId),
-            MockAPI.getDeleted(activeCategoryId)
+            API.getTasks(activeCategoryId),
+            API.getArchived(activeCategoryId),
+            API.getDeleted(activeCategoryId)
         ]);
         tasks = tasksRes.data;
         archivedTasks = archivedRes.data;
         deletedTasks = deletedRes.data;
     } catch (err) {
         console.error('Failed to load data:', err);
-        showError('Failed to load data');
+        showError(err.message || 'Failed to load data');
     } finally {
         isLoading = false;
         renderAll();
@@ -115,7 +115,7 @@ async function fetchData() {
 
 async function addTask(taskData) {
     try {
-        const response = await MockAPI.createTask(activeCategoryId, taskData);
+        const response = await API.createTask(activeCategoryId, taskData);
         tasks.push(response.data);
         renderActiveList();
         renderForm();
@@ -224,7 +224,7 @@ async function startEdit(id) {
         }
 
         try {
-            await MockAPI.updateTask(id, updates);
+            await API.updateTask(id, updates);
             const idx = tasks.findIndex(t => t.id === id);
             if (idx !== -1) Object.assign(tasks[idx], updates);
             renderActiveList();
@@ -246,7 +246,7 @@ async function archiveTask(id) {
     if (!task || !task.completed) return;
 
     try {
-        await MockAPI.archiveTask(id);
+        await API.archiveTask(id);
         tasks = tasks.filter(t => t.id !== id);
         archivedTasks.push(task);
         renderAll();
@@ -266,7 +266,7 @@ async function batchArchive(ids) {
         const task = tasks.find(t => t.id === id);
         if (task && task.completed) {
             try {
-                await MockAPI.archiveTask(id);
+                await API.archiveTask(id);
                 archivedTasks.push({ ...task, archived_at: new Date().toISOString() });
                 archivedIds.push(id);
                 success++;
@@ -300,7 +300,7 @@ async function batchDelete(ids) {
         const task = tasks.find(t => t.id === id);
         if (task) {
             try {
-                await MockAPI.deleteTask(id);
+                await API.deleteTask(id);
                 deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
                 deletedIds.push(id);
                 success++;
@@ -324,7 +324,7 @@ async function batchDelete(ids) {
 // ========== 从归档恢复任务 ==========
 async function restoreFromArchived(id) {
     try {
-        await MockAPI.unarchiveTask(id);
+        await API.unarchiveTask(id);
         const task = archivedTasks.find(t => t.id === id);
         archivedTasks = archivedTasks.filter(t => t.id !== id);
         tasks.push(task);
@@ -338,7 +338,7 @@ async function restoreFromArchived(id) {
 // ========== 从归档移到删除 ==========
 async function moveToDeletedFromArchived(id) {
     try {
-        await MockAPI.deleteFromArchived(id);
+        await API.deleteFromArchived(id);
         const task = archivedTasks.find(t => t.id === id);
         archivedTasks = archivedTasks.filter(t => t.id !== id);
         deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
@@ -352,7 +352,7 @@ async function moveToDeletedFromArchived(id) {
 // ========== 软删除 ==========
 async function softDeleteTask(id) {
     try {
-        await MockAPI.deleteTask(id);
+        await API.deleteTask(id);
         const task = tasks.find(t => t.id === id);
         tasks = tasks.filter(t => t.id !== id);
         deletedTasks.push({ ...task, deleted_at: new Date().toISOString() });
@@ -366,7 +366,7 @@ async function softDeleteTask(id) {
 // ========== 从已删除恢复 ==========
 async function restoreFromDeleted(id) {
     try {
-        await MockAPI.undeleteTask(id);
+        await API.undeleteTask(id);
         const task = deletedTasks.find(t => t.id === id);
         deletedTasks = deletedTasks.filter(t => t.id !== id);
         tasks.push(task);
@@ -380,7 +380,7 @@ async function restoreFromDeleted(id) {
 // ========== 永久删除（确认中处理） ==========
 async function handlePermanentDelete(type, id) {
     try {
-        await MockAPI.permanentDelete(type, id);
+        await API.permanentDelete(type, id);
         if (type === 'archived') {
             archivedTasks = archivedTasks.filter(t => t.id !== id);
         } else {
@@ -520,7 +520,7 @@ async function renderSidebar() {
     categoryListEl.innerHTML = '';
 
     try {
-        const response = await MockAPI.getCategories();
+        const response = await API.getCategories();
         const categories = response.data;
 
         categories.forEach(cat => {
@@ -1118,7 +1118,7 @@ async function toggleTask(id) {
     const newCompleted = !task.completed;
 
     try {
-        await MockAPI.updateTask(id, { completed: newCompleted });
+        await API.updateTask(id, { completed: newCompleted });
         task.completed = newCompleted;
         renderAll();
         await renderSidebar();
