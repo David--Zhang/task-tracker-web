@@ -249,11 +249,11 @@ async function fetchTasks(categoryId) {
 4. **错误处理** — API 调用失败时给出用户提示（而非静默失败）
 5. **加载状态** — API 请求期间显示 loading 指示器
 
-### 6.3 兼容性处理
+### 6.3 兼容性处理 ✅（v2.2 已实现）
 
-- 前端保留 localStorage 作为离线降级方案
-- 当 API 不可用时自动切换到 localStorage 模式
-- 恢复联网后提供数据同步选项
+- 前端保留 localStorage 作为离线降级方案 → `public/offline-store.js`（快照 + 操作队列）
+- 当 API 不可用时自动切换到 localStorage 模式 → `public/api.js` 网络失败自动降级，界面显示离线提示条
+- 恢复联网后提供数据同步选项 → 提示条「Sync now」按钮 + 每 20 秒自动同步，队列按序重放（创建携带客户端 id，幂等）
 
 ---
 
@@ -286,6 +286,7 @@ async function fetchTasks(categoryId) {
 [v1.0] ✅ 前端 MVP — 单分类任务管理 (localStorage)
 [v1.1] ✅ 侧边栏双分类 — Construction + Custom Clearance
 [v2.0] ✅ 后端化 — REST API + SQLite + 前端接入
+[v2.2] ✅ 离线降级 — /api/health + localStorage 兜底 + 同步 + 旧数据迁移脚本
 [v2.1] 📋 任务编辑 + 优先级
 [v3.0] 📋 多用户 + 实时同步
 ```

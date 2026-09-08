@@ -40,6 +40,9 @@ const toolBar = document.getElementById('toolbar');
 const searchInput = document.getElementById('search-input');
 const exportCsvBtn = document.getElementById('export-csv-btn');
 const selectAllCheckbox = document.getElementById('select-all-checkbox');
+const offlineBanner = document.getElementById('offline-banner');
+const offlineBannerText = document.getElementById('offline-banner-text');
+const syncNowBtn = document.getElementById('sync-now-btn');
 
 // ========== 工具函数 ==========
 function formatDate(dateString) {
@@ -1036,11 +1039,56 @@ function renderDeletedList() {
 }
 
 // ========== 全量重新渲染 ==========
+// ========== 离线同步提示条 ==========
+function updateSyncBanner() {
+    if (!offlineBanner) return;
+    const pending = typeof API !== 'undefined' && API.hasPendingOps ? API.hasPendingOps() : false;
+    const offline = typeof API !== 'undefined' && API.isOffline ? API.isOffline() : false;
+
+    if (!pending && !offline) {
+        offlineBanner.style.display = 'none';
+        return;
+    }
+
+    offlineBanner.style.display = 'flex';
+    if (pending) {
+        offlineBanner.classList.add('banner-pending');
+        offlineBannerText.textContent = '📤 Unsaved local changes — sync them to the server';
+        if (syncNowBtn) syncNowBtn.disabled = false;
+    } else {
+        offlineBanner.classList.remove('banner-pending');
+        offlineBannerText.textContent = '⚠️ Offline mode — changes will be saved locally and synced later';
+        if (syncNowBtn) syncNowBtn.disabled = true;
+    }
+}
+
+async function handleSyncNow() {
+    if (typeof API === 'undefined' || !API.sync) return;
+    if (syncNowBtn) syncNowBtn.disabled = true;
+    try {
+        const result = await API.sync();
+        if (result.pending === 0 && result.synced > 0) {
+            showToast(`Synced ${result.synced} change(s) to server`);
+            await fetchData();
+            await renderSidebar();
+        } else if (result.error) {
+            showError(`Sync failed: ${result.error} (${result.pending} pending)`);
+        } else if (result.synced === 0 && result.pending === 0) {
+            showToast('Nothing to sync');
+        }
+    } catch (err) {
+        showError('Sync failed: ' + (err.message || 'network error'));
+    } finally {
+        updateSyncBanner();
+    }
+}
+
 function renderAll() {
     renderActiveList();
     renderArchivedList();
     renderDeletedList();
     updateBatchActionBar();
+    updateSyncBanner();
 }
 
 function updateStats() {
@@ -1195,8 +1243,30 @@ async function init() {
         });
     }
 
+    // 离线同步：手动同步按钮 + 定期自动尝试
+    if (syncNowBtn) {
+        syncNowBtn.addEventListener('click', handleSyncNow);
+    }
+    if (typeof API !== 'undefined' && API.sync) {
+        setInterval(async () => {
+            if (API.hasPendingOps()) {
+                try {
+                    const result = await API.sync();
+                    if (result.pending === 0 && result.synced > 0) {
+                        await fetchData();
+                        await renderSidebar();
+                        updateSyncBanner();
+                    }
+                } catch {
+                    /* 静默重试，等待下次间隔 */
+                }
+            }
+        }, 20000);
+    }
+
     await fetchData();
     await renderSidebar();
+    updateSyncBanner();
 }
 
 init();

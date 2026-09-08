@@ -219,7 +219,11 @@ function createDb(dbPath) {
             validateTaskData(categoryId, data);
 
             const now = new Date().toISOString();
-            const id = generateId();
+            // 支持客户端传入 id（离线同步 / 幂等创建）；未传则由服务端生成
+            const id = typeof data.id === 'string' && data.id ? data.id : generateId();
+            if (getTaskRow(id)) {
+                throw new ApiError(409, `Task with id "${id}" already exists`);
+            }
             const isConstruction = categoryId === 'construction';
             db.prepare(`
                 INSERT INTO tasks (
@@ -242,6 +246,54 @@ function createDb(dbPath) {
                 now, now
             );
             return rowToTask(getTaskRow(id));
+        },
+
+        // 批量导入（数据迁移用）：绕过严格字段校验，忠实导入迁移数据；幂等（已存在则跳过）
+        importTask(task) {
+            if (!task || typeof task !== 'object') {
+                throw new ApiError(400, 'Invalid task');
+            }
+            const categoryId = task.category_id;
+            if (categoryId !== 'construction' && categoryId !== 'custom-clearance') {
+                throw new ApiError(400, `Unknown category_id: ${categoryId}`);
+            }
+            const id = typeof task.id === 'string' && task.id ? task.id : generateId();
+            if (getTaskRow(id)) {
+                return { imported: false, id, reason: 'exists' };
+            }
+
+            const now = new Date().toISOString();
+            const isConstruction = categoryId === 'construction';
+            const status = ['active', 'archived', 'deleted'].includes(task.status) ? task.status : 'active';
+            const completed = task.completed ? 1 : 0;
+            const completionPercentage = Number.isFinite(Number(task.completionPercentage))
+                ? Number(task.completionPercentage)
+                : 0;
+
+            db.prepare(`
+                INSERT INTO tasks (
+                    id, category_id, status, completed,
+                    name, start_date, completion_date, completion_percentage,
+                    arrival_date, bill_of_lading, shipping_company, project_name, cargo_description,
+                    archived_at, deleted_at, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                id, categoryId, status, completed,
+                isConstruction ? (task.name ?? null) : null,
+                isConstruction ? (task.startDate ?? null) : null,
+                isConstruction ? (task.completionDate ?? null) : null,
+                isConstruction ? completionPercentage : 0,
+                !isConstruction ? (task.arrivalDate ?? null) : null,
+                !isConstruction ? (task.billOfLading ?? null) : null,
+                !isConstruction ? (task.shippingCompany ?? null) : null,
+                !isConstruction ? (task.projectName ?? null) : null,
+                !isConstruction ? (task.cargoDescription ?? null) : null,
+                task.archived_at ?? null,
+                task.deleted_at ?? null,
+                task.created_at ?? now,
+                task.updated_at ?? now
+            );
+            return { imported: true, id };
         },
 
         // PATCH /api/tasks/:id（活跃或已归档任务可更新；字段按分类白名单校验）

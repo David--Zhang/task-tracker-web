@@ -18,6 +18,12 @@
     </aside>
 
     <main class="main-content">
+        <!-- ========== 离线提示条（离线或有待同步操作时显示） ========== -->
+        <div id="offline-banner" class="offline-banner" style="display:none;" role="status">
+            <span id="offline-banner-text">⚠️ Offline mode — changes are saved locally</span>
+            <button type="button" id="sync-now-btn" class="btn-sync" title="Sync pending changes to server">🔄 Sync now</button>
+        </div>
+
         <div class="category-header">
             <h1 id="category-title"></h1>
             <p id="category-desc"></p>
@@ -108,6 +114,7 @@
         </div>
     </div>
 
+    <script src="offline-store.js"></script>
     <script src="api.js"></script>
     <script src="app.js"></script>
 </body>

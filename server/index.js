@@ -19,6 +19,17 @@ function createApp(dbPath = DEFAULT_DB_PATH) {
     app.use('/api/categories', createCategoriesRouter(db));
     app.use('/api/tasks', createTasksRouter(db));
 
+    // 健康检查
+    app.get('/api/health', (req, res) => {
+        res.json({
+            data: {
+                status: 'ok',
+                uptime: Math.round(process.uptime()),
+                timestamp: new Date().toISOString()
+            }
+        });
+    });
+
     // 未知 /api 路径统一返回错误信封
     app.use('/api', (req, res) => {
         res.status(404).json({ error: { code: 404, message: 'Not found' } });

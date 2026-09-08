@@ -322,6 +322,44 @@ async function req(server, method, urlPath, body) {
         });
     });
 
+    await describe('数据导入 (importTask，迁移脚本依赖)', () => {
+        test('导入旧形状 Construction 任务（text -> name）应成功', () => {
+            const r = db.importTask({
+                id: 'migrated-c1', category_id: 'construction', completed: true,
+                name: 'Old text task', startDate: null, completionDate: null, completionPercentage: 100
+            });
+            assert.equal(r.imported, true);
+            const t = db.getTask('migrated-c1');
+            assert.equal(t.name, 'Old text task');
+            assert.equal(t.completionPercentage, 100);
+            assert.equal(t.completed, true);
+        });
+
+        test('导入旧形状 Clearance 任务应成功', () => {
+            const r = db.importTask({
+                id: 'migrated-k1', category_id: 'custom-clearance', completed: false,
+                arrivalDate: null, billOfLading: 'Old clearance text',
+                shippingCompany: '', projectName: '(migrated)', cargoDescription: 'Old clearance text'
+            });
+            assert.equal(r.imported, true);
+            const t = db.getTask('migrated-k1');
+            assert.equal(t.billOfLading, 'Old clearance text');
+        });
+
+        test('重复导入同一 id 应幂等（跳过）', () => {
+            const r = db.importTask({ id: 'migrated-c1', category_id: 'construction', name: 'dup' });
+            assert.equal(r.imported, false);
+            assert.equal(r.reason, 'exists');
+        });
+
+        test('导入未知分类应抛出 400', () => {
+            assert.throws(
+                () => db.importTask({ id: 'x', category_id: 'unknown' }),
+                (err) => err instanceof ApiError && err.code === 400
+            );
+        });
+    });
+
     cleanupDb(db);
 
     // ---------- 第二部分：HTTP 层测试 ----------
@@ -453,6 +491,38 @@ async function req(server, method, urlPath, body) {
             });
             const { status } = await req(server, 'POST', `/api/tasks/${body.data.id}/archive`);
             assert.equal(status, 400);
+        });
+    });
+
+    await describe('HTTP: 健康检查', async () => {
+        await testAsync('GET /api/health 应返回 {data:{status:ok}}', async () => {
+            const { status, body } = await req(server, 'GET', '/api/health');
+            assert.equal(status, 200);
+            assert.equal(body.data.status, 'ok');
+            assert.equal(typeof body.data.uptime, 'number');
+            assert.ok(body.data.timestamp);
+        });
+    });
+
+    await describe('HTTP: 客户端指定 id 创建（离线同步基础）', async () => {
+        await testAsync('POST 携带 id 应使用客户端 id', async () => {
+            const { status, body } = await req(server, 'POST', '/api/tasks', {
+                category_id: 'construction', id: 'offline-created-id-123',
+                name: 'Created with client id',
+                startDate: '2026-08-01', completionDate: '2026-08-15', completionPercentage: 0
+            });
+            assert.equal(status, 201);
+            assert.equal(body.data.id, 'offline-created-id-123');
+        });
+
+        await testAsync('POST 携带已存在的 id 应返回 409', async () => {
+            const { status, body } = await req(server, 'POST', '/api/tasks', {
+                category_id: 'construction', id: 'offline-created-id-123',
+                name: 'Duplicate', startDate: '2026-08-01',
+                completionDate: '2026-08-15', completionPercentage: 0
+            });
+            assert.equal(status, 409);
+            assert.equal(body.error.code, 409);
         });
     });
 
