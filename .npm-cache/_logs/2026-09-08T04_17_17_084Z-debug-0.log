@@ -1,0 +1,273 @@
+0 verbose cli F:\Program Files\Node.js\node.exe C:\Users\Administrator\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@8.19.4
+2 info using node@v25.9.0
+3 timing npm:load:whichnode Completed in 1ms
+4 timing config:load:defaults Completed in 3ms
+5 timing config:load:file:C:\Users\Administrator\AppData\Roaming\npm\node_modules\npm\npmrc Completed in 17ms
+6 timing config:load:builtin Completed in 17ms
+7 timing config:load:cli Completed in 6ms
+8 timing config:load:env Completed in 2ms
+9 timing config:load:file:F:\VS CODE PROJECT\task-tracker-web\.npmrc Completed in 0ms
+10 timing config:load:project Completed in 4ms
+11 timing config:load:file:C:\Users\Administrator\.npmrc Completed in 0ms
+12 timing config:load:user Completed in 1ms
+13 timing config:load:file:C:\Users\Administrator\AppData\Roaming\npm\etc\npmrc Completed in 0ms
+14 timing config:load:global Completed in 0ms
+15 timing config:load:validate Completed in 1ms
+16 timing config:load:credentials Completed in 1ms
+17 timing config:load:setEnvs Completed in 1ms
+18 timing config:load Completed in 38ms
+19 timing npm:load:configload Completed in 39ms
+20 timing npm:load:mkdirpcache Completed in 9ms
+21 timing npm:load:mkdirplogs Completed in 2ms
+22 verbose title npm install express
+23 verbose argv "install" "express" "--cache" "F:\\VS CODE PROJECT\\task-tracker-web\\.npm-cache"
+24 timing npm:load:setTitle Completed in 3ms
+25 timing config:load:flatten Completed in 7ms
+26 timing npm:load:display Completed in 9ms
+27 verbose logfile logs-max:10 dir:F:\VS CODE PROJECT\task-tracker-web\.npm-cache\_logs
+28 verbose logfile F:\VS CODE PROJECT\task-tracker-web\.npm-cache\_logs\2026-09-08T04_17_17_084Z-debug-0.log
+29 timing npm:load:logFile Completed in 14ms
+30 timing npm:load:timers Completed in 0ms
+31 timing npm:load:configScope Completed in 0ms
+32 timing npm:load Completed in 77ms
+33 timing arborist:ctor Completed in 1ms
+34 silly logfile done cleaning log files
+35 timing idealTree:init Completed in 136ms
+36 timing idealTree:userRequests Completed in 3ms
+37 silly idealTree buildDeps
+38 silly fetch manifest express@^5.2.1
+39 http fetch GET 200 https://registry.npmjs.org/express 1003ms (cache revalidated)
+40 silly placeDep ROOT express@5.2.1 REPLACE for: task-tracker-web@2.0.0 want: ^5.2.1
+41 timing idealTree:#root Completed in 1063ms
+42 timing idealTree:node_modules/express Completed in 0ms
+43 timing idealTree:buildDeps Completed in 1066ms
+44 timing idealTree:fixDepFlags Completed in 3ms
+45 timing idealTree Completed in 1215ms
+46 timing reify:loadTrees Completed in 1216ms
+47 timing reify:diffTrees Completed in 25ms
+48 silly reify moves {}
+49 timing reify:retireShallow Completed in 3ms
+50 timing reify:createSparse Completed in 146ms
+51 timing reify:loadBundles Completed in 0ms
+52 silly audit bulk request {
+52 silly audit   accepts: [ '2.0.0' ],
+52 silly audit   'body-parser': [ '2.3.0' ],
+52 silly audit   'content-type': [ '2.1.0', '1.0.5' ],
+52 silly audit   bytes: [ '3.1.2' ],
+52 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+52 silly audit   'call-bound': [ '1.0.4' ],
+52 silly audit   'content-disposition': [ '1.1.0' ],
+52 silly audit   cookie: [ '0.7.2' ],
+52 silly audit   'cookie-signature': [ '1.2.2' ],
+52 silly audit   debug: [ '4.4.3' ],
+52 silly audit   depd: [ '2.0.0' ],
+52 silly audit   'dunder-proto': [ '1.0.1' ],
+52 silly audit   'ee-first': [ '1.1.1' ],
+52 silly audit   encodeurl: [ '2.0.0' ],
+52 silly audit   'es-define-property': [ '1.0.1' ],
+52 silly audit   'es-errors': [ '1.3.0' ],
+52 silly audit   'es-object-atoms': [ '1.1.2' ],
+52 silly audit   'escape-html': [ '1.0.3' ],
+52 silly audit   etag: [ '1.8.1' ],
+52 silly audit   finalhandler: [ '2.1.1' ],
+52 silly audit   forwarded: [ '0.2.0' ],
+52 silly audit   fresh: [ '2.0.0' ],
+52 silly audit   'function-bind': [ '1.1.2' ],
+52 silly audit   'get-intrinsic': [ '1.3.0' ],
+52 silly audit   'get-proto': [ '1.0.1' ],
+52 silly audit   gopd: [ '1.2.0' ],
+52 silly audit   'has-symbols': [ '1.1.0' ],
+52 silly audit   hasown: [ '2.0.4' ],
+52 silly audit   'http-errors': [ '2.0.1' ],
+52 silly audit   'iconv-lite': [ '0.7.3' ],
+52 silly audit   inherits: [ '2.0.4' ],
+52 silly audit   'ipaddr.js': [ '1.9.1' ],
+52 silly audit   'is-promise': [ '4.0.0' ],
+52 silly audit   'math-intrinsics': [ '1.1.0' ],
+52 silly audit   'media-typer': [ '1.1.1' ],
+52 silly audit   'merge-descriptors': [ '2.0.0' ],
+52 silly audit   'mime-db': [ '1.54.0' ],
+52 silly audit   'mime-types': [ '3.0.2' ],
+52 silly audit   ms: [ '2.1.3' ],
+52 silly audit   negotiator: [ '1.1.0' ],
+52 silly audit   'object-inspect': [ '1.13.4' ],
+52 silly audit   'on-finished': [ '2.4.1' ],
+52 silly audit   once: [ '1.4.0' ],
+52 silly audit   parseurl: [ '1.3.3' ],
+52 silly audit   'path-to-regexp': [ '8.4.2' ],
+52 silly audit   'proxy-addr': [ '2.0.7' ],
+52 silly audit   qs: [ '6.16.0' ],
+52 silly audit   'range-parser': [ '1.3.0' ],
+52 silly audit   'raw-body': [ '3.0.2' ],
+52 silly audit   router: [ '2.2.0' ],
+52 silly audit   'safer-buffer': [ '2.1.2' ],
+52 silly audit   send: [ '1.2.1' ],
+52 silly audit   'serve-static': [ '2.2.1' ],
+52 silly audit   setprototypeof: [ '1.2.0' ],
+52 silly audit   'side-channel': [ '1.1.1' ],
+52 silly audit   'side-channel-list': [ '1.0.1' ],
+52 silly audit   'side-channel-map': [ '1.0.1' ],
+52 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+52 silly audit   statuses: [ '2.0.2' ],
+52 silly audit   toidentifier: [ '1.0.1' ],
+52 silly audit   'type-is': [ '2.1.0' ],
+52 silly audit   unpipe: [ '1.0.0' ],
+52 silly audit   vary: [ '1.1.2' ],
+52 silly audit   wrappy: [ '1.0.2' ],
+52 silly audit   express: [ '5.2.1' ]
+52 silly audit }
+53 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 1114ms
+54 timing auditReport:getReport Completed in 1122ms
+55 silly audit report {}
+56 timing auditReport:init Completed in 0ms
+57 timing reify:audit Completed in 1124ms
+58 timing reifyNode:node_modules/ms Completed in 1980ms
+59 timing reifyNode:node_modules/wrappy Completed in 1985ms
+60 timing reifyNode:node_modules/escape-html Completed in 1980ms
+61 timing reifyNode:node_modules/once Completed in 1985ms
+62 timing reifyNode:node_modules/ee-first Completed in 2084ms
+63 timing reifyNode:node_modules/encodeurl Completed in 2098ms
+64 timing reifyNode:node_modules/serve-static Completed in 2105ms
+65 timing reifyNode:node_modules/content-disposition Completed in 2236ms
+66 timing reifyNode:node_modules/send Completed in 2447ms
+67 timing reifyNode:node_modules/unpipe Completed in 2457ms
+68 timing reifyNode:node_modules/vary Completed in 2462ms
+69 timing reifyNode:node_modules/toidentifier Completed in 2462ms
+70 timing reifyNode:node_modules/parseurl Completed in 2462ms
+71 timing reifyNode:node_modules/range-parser Completed in 2465ms
+72 timing reifyNode:node_modules/merge-descriptors Completed in 2464ms
+73 timing reifyNode:node_modules/http-errors Completed in 2465ms
+74 timing reifyNode:node_modules/cookie-signature Completed in 2463ms
+75 timing reifyNode:node_modules/content-type Completed in 2463ms
+76 timing reifyNode:node_modules/forwarded Completed in 2466ms
+77 timing reifyNode:node_modules/media-typer Completed in 2467ms
+78 timing reifyNode:node_modules/fresh Completed in 2467ms
+79 timing reifyNode:node_modules/etag Completed in 2468ms
+80 timing reifyNode:node_modules/type-is Completed in 2474ms
+81 timing reifyNode:node_modules/inherits Completed in 2470ms
+82 timing reifyNode:node_modules/accepts Completed in 2466ms
+83 timing reifyNode:node_modules/bytes Completed in 2467ms
+84 timing reifyNode:node_modules/raw-body Completed in 2474ms
+85 timing reifyNode:node_modules/proxy-addr Completed in 2474ms
+86 timing reifyNode:node_modules/on-finished Completed in 2474ms
+87 timing reifyNode:node_modules/finalhandler Completed in 2475ms
+88 timing reifyNode:node_modules/cookie Completed in 2475ms
+89 timing reifyNode:node_modules/is-promise Completed in 2819ms
+90 timing reifyNode:node_modules/setprototypeof Completed in 2832ms
+91 timing reifyNode:node_modules/statuses Completed in 2838ms
+92 timing reifyNode:node_modules/mime-types Completed in 2838ms
+93 timing reifyNode:node_modules/type-is/node_modules/content-type Completed in 2865ms
+94 timing reifyNode:node_modules/ipaddr.js Completed in 2863ms
+95 timing reifyNode:node_modules/body-parser/node_modules/content-type Completed in 2859ms
+96 timing reifyNode:node_modules/negotiator/node_modules/content-type Completed in 2868ms
+97 timing reifyNode:node_modules/depd Completed in 2865ms
+98 timing reifyNode:node_modules/path-to-regexp Completed in 2876ms
+99 timing reifyNode:node_modules/safer-buffer Completed in 2893ms
+100 timing reifyNode:node_modules/router Completed in 2910ms
+101 timing reifyNode:node_modules/debug Completed in 3010ms
+102 timing reifyNode:node_modules/negotiator Completed in 3273ms
+103 timing reifyNode:node_modules/mime-db Completed in 3288ms
+104 timing reifyNode:node_modules/hasown Completed in 3326ms
+105 timing reifyNode:node_modules/get-intrinsic Completed in 3326ms
+106 timing reifyNode:node_modules/express Completed in 3407ms
+107 timing reifyNode:node_modules/body-parser Completed in 3398ms
+108 timing reifyNode:node_modules/es-define-property Completed in 3402ms
+109 timing reifyNode:node_modules/call-bound Completed in 3407ms
+110 timing reifyNode:node_modules/side-channel-weakmap Completed in 3420ms
+111 timing reifyNode:node_modules/side-channel-map Completed in 3423ms
+112 timing reifyNode:node_modules/side-channel Completed in 3428ms
+113 timing reifyNode:node_modules/gopd Completed in 3430ms
+114 timing reifyNode:node_modules/function-bind Completed in 3462ms
+115 timing reifyNode:node_modules/side-channel-list Completed in 3476ms
+116 timing reifyNode:node_modules/dunder-proto Completed in 3496ms
+117 timing reifyNode:node_modules/get-proto Completed in 3499ms
+118 timing reifyNode:node_modules/es-object-atoms Completed in 3508ms
+119 timing reifyNode:node_modules/has-symbols Completed in 3517ms
+120 timing reifyNode:node_modules/es-errors Completed in 3809ms
+121 timing reifyNode:node_modules/call-bind-apply-helpers Completed in 3810ms
+122 timing reifyNode:node_modules/qs Completed in 3857ms
+123 timing reifyNode:node_modules/math-intrinsics Completed in 3878ms
+124 timing reifyNode:node_modules/object-inspect Completed in 3883ms
+125 timing reifyNode:node_modules/iconv-lite Completed in 3883ms
+126 timing reify:unpack Completed in 3888ms
+127 timing reify:unretire Completed in 0ms
+128 timing build:queue Completed in 10ms
+129 timing build:deps Completed in 11ms
+130 timing build Completed in 11ms
+131 timing reify:build Completed in 12ms
+132 timing reify:trash Completed in 0ms
+133 timing reify:save Completed in 321ms
+134 timing reify Completed in 5729ms
+135 silly ADD node_modules/express
+136 silly ADD node_modules/wrappy
+137 silly ADD node_modules/vary
+138 silly ADD node_modules/unpipe
+139 silly ADD node_modules/type-is
+140 silly ADD node_modules/type-is/node_modules/content-type
+141 silly ADD node_modules/toidentifier
+142 silly ADD node_modules/statuses
+143 silly ADD node_modules/side-channel-weakmap
+144 silly ADD node_modules/side-channel-map
+145 silly ADD node_modules/side-channel-list
+146 silly ADD node_modules/side-channel
+147 silly ADD node_modules/setprototypeof
+148 silly ADD node_modules/serve-static
+149 silly ADD node_modules/send
+150 silly ADD node_modules/safer-buffer
+151 silly ADD node_modules/router
+152 silly ADD node_modules/raw-body
+153 silly ADD node_modules/range-parser
+154 silly ADD node_modules/qs
+155 silly ADD node_modules/proxy-addr
+156 silly ADD node_modules/path-to-regexp
+157 silly ADD node_modules/parseurl
+158 silly ADD node_modules/once
+159 silly ADD node_modules/on-finished
+160 silly ADD node_modules/object-inspect
+161 silly ADD node_modules/negotiator
+162 silly ADD node_modules/negotiator/node_modules/content-type
+163 silly ADD node_modules/ms
+164 silly ADD node_modules/mime-types
+165 silly ADD node_modules/mime-db
+166 silly ADD node_modules/merge-descriptors
+167 silly ADD node_modules/media-typer
+168 silly ADD node_modules/math-intrinsics
+169 silly ADD node_modules/is-promise
+170 silly ADD node_modules/ipaddr.js
+171 silly ADD node_modules/inherits
+172 silly ADD node_modules/iconv-lite
+173 silly ADD node_modules/http-errors
+174 silly ADD node_modules/hasown
+175 silly ADD node_modules/has-symbols
+176 silly ADD node_modules/gopd
+177 silly ADD node_modules/get-proto
+178 silly ADD node_modules/get-intrinsic
+179 silly ADD node_modules/function-bind
+180 silly ADD node_modules/fresh
+181 silly ADD node_modules/forwarded
+182 silly ADD node_modules/finalhandler
+183 silly ADD node_modules/etag
+184 silly ADD node_modules/escape-html
+185 silly ADD node_modules/es-object-atoms
+186 silly ADD node_modules/es-errors
+187 silly ADD node_modules/es-define-property
+188 silly ADD node_modules/encodeurl
+189 silly ADD node_modules/ee-first
+190 silly ADD node_modules/dunder-proto
+191 silly ADD node_modules/depd
+192 silly ADD node_modules/debug
+193 silly ADD node_modules/cookie-signature
+194 silly ADD node_modules/cookie
+195 silly ADD node_modules/content-type
+196 silly ADD node_modules/content-disposition
+197 silly ADD node_modules/call-bound
+198 silly ADD node_modules/call-bind-apply-helpers
+199 silly ADD node_modules/bytes
+200 silly ADD node_modules/body-parser
+201 silly ADD node_modules/body-parser/node_modules/content-type
+202 silly ADD node_modules/accepts
+203 timing command:install Completed in 5751ms
+204 verbose exit 0
+205 timing npm Completed in 6223ms
+206 info ok
