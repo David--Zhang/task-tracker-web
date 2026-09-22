@@ -1,0 +1,9 @@
+{
+  "construction": [
+    { "id": "old-c-1", "text": "Renovate kitchen", "completed": true },
+    { "id": "old-c-2", "text": "Fix roof leak", "completed": false }
+  ],
+  "custom-clearance": [
+    { "id": "old-k-1", "text": "Clear electronics shipment", "completed": false }
+  ]
+}
